@@ -139,9 +139,13 @@ Elde edilen görüntü analiz sonuçlarının, yöneticilerin kolayca takip edeb
 
 - **Expected point completion within Sprint:** 200 points
 
-- **Point Completion Logic:** A total target of 500 points was set. In the first sprint, 200 points were targeted as the focus was on research, planning, and project setup.
+- **Point Completion Logic:** A total target of 1000 points was set. In Sprint 1, 200 points were targeted and completed as the focus was on research and planning. In Sprint 2, 400 points are targeted as the development phase begins. In Sprint 3, 400 points are targeted for the remaining development and integration work.
 
 - **Product Backlog URL:** [Click for Backlog](https://trello.com/b/2BtcZtM4/yzta-bootcamp)
+
+- **Story Selection:**
+
+![Story Selection](assets/sprint1/Ekran%20Resmi%202026-07-06%2013.15.28.png)
 
 <details>
   <summary><h4>Türkçe Açıklama</h4></summary>
@@ -154,9 +158,13 @@ Elde edilen görüntü analiz sonuçlarının, yöneticilerin kolayca takip edeb
 
 - **Sprint İçinde Tamamlanması Beklenen Puan:** 200 puan
 
-- **Puan Tamamlama Mantığı:** Toplamda 500 puanlık bir hedef belirlendi. Birinci sprintte araştırma, planlama ve proje kurulumuna odaklanıldığı için 200 puan hedeflenmiştir.
+- **Puan Tamamlama Mantığı:** Toplam hedef 1000 puan olarak belirlenmiştir. Sprint 1'de araştırma ve planlama odaklı çalışıldığı için 200 puan hedeflenmiş ve tamamlanmıştır. Sprint 2'de geliştirme aşamasına geçileceğinden 400 puan, Sprint 3'te kalan geliştirme ve entegrasyon çalışmaları için 400 puan hedeflenmiştir.
 
 - **Product Backlog URL:** [Backlog için tıklayın](https://trello.com/b/2BtcZtM4/yzta-bootcamp)
+
+- **Story Seçimi:**
+
+![Story Selection](assets/sprint1/Ekran%20Resmi%202026-07-06%2013.15.28.png)
 
 </details>
 
