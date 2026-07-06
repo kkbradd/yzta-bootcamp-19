@@ -86,6 +86,23 @@ Elde edilen görüntü analiz sonuçlarının, yöneticilerin kolayca takip edeb
   <details>
     <summary><h2>Product Screenshot</h2></summary>
 
+- Camera feeds from vehicles and stops are processed on-device by CSRNet, which converts images into crowd density counts — no images leave the vehicle.
+- Count data is transmitted to the central server via MQTT over 4G, enriched with vehicle and route context, then stored in PostgreSQL and cached in Redis for real-time access.
+- The admin panel displays live congestion levels by vehicle, route, and stop through a React-based dashboard powered by WebSocket.
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+- Araç ve duraklardaki kamera görüntüleri, CSRNet modeli tarafından cihaz üzerinde işlenerek kalabalık yoğunluk sayılarına dönüştürülür — hiçbir görüntü araçtan çıkmaz.
+- Sayım verisi, MQTT protokolüyle 4G üzerinden merkez sunucuya iletilir; araç ve hat bilgileriyle zenginleştirilerek PostgreSQL'e kaydedilir ve anlık erişim için Redis'e önbelleğe alınır.
+- Admin panel, WebSocket destekli React tabanlı gösterge panosu aracılığıyla araç, hat ve durak bazlı anlık yoğunluk seviyelerini görüntüler.
+
+</details>
+
+![Otobüs](assets/sprint1/otobus.png)
+![Otobüs 2](assets/sprint1/otobus2.png)
+![Akış](assets/sprint1/akis.png)
+
   </details>
 
 ---
