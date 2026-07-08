@@ -61,9 +61,7 @@ class DurakTablosu(Taban):
 
 class CihazTablosu(Taban):
     __tablename__ = "cihazlar"
-    __table_args__ = (
-        CheckConstraint(f"tip IN ({_CIHAZ_TIPLERI_SQL})", name="ck_cihazlar_tip"),
-    )
+    __table_args__ = (CheckConstraint(f"tip IN ({_CIHAZ_TIPLERI_SQL})", name="ck_cihazlar_tip"),)
 
     id: Mapped[str] = mapped_column(primary_key=True)  # ör. "edge_0042"
     tip: Mapped[str]

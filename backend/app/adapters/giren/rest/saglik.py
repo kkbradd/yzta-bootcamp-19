@@ -23,8 +23,7 @@ async def saglik(
     # Bağımsız kontroller — sırayla beklemek yerine eşzamanlı çalıştırılır.
     sonuclar = await asyncio.gather(*(_guvenli_kontrol(k) for k in kontroller.values()))
     bagimliliklar = {
-        ad: "ok" if saglikli else "hata"
-        for ad, saglikli in zip(kontroller, sonuclar, strict=True)
+        ad: "ok" if saglikli else "hata" for ad, saglikli in zip(kontroller, sonuclar, strict=True)
     }
     hepsi_saglikli = all(sonuclar)
     return JSONResponse(

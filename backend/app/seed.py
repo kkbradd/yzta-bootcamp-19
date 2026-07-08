@@ -55,8 +55,7 @@ async def tohumla(oturum: AsyncSession) -> bool:
     hatlar = {hat_no: HatTablosu(hat_no=hat_no, ad=ad) for hat_no, ad in HATLAR}
     durak = DurakTablosu(ad="Zincirlikuyu", enlem=41.0670, boylam=29.0146)
     araclar = [
-        AracTablosu(plaka=plaka, tip=tip, kapasite=kapasite)
-        for plaka, tip, kapasite, _ in ARACLAR
+        AracTablosu(plaka=plaka, tip=tip, kapasite=kapasite) for plaka, tip, kapasite, _ in ARACLAR
     ]
     arac_cihazlari = [
         CihazTablosu(id=f"edge_{sira:04d}", tip=CIHAZ_TIPI_ARAC, yazilim_surumu=YAZILIM_SURUMU)
@@ -75,15 +74,11 @@ async def tohumla(oturum: AsyncSession) -> bool:
                 HatAtamasiTablosu(
                     hat_id=hatlar[hat_no].id, arac_id=arac.id, baslangic=atama_baslangici
                 ),
-                CihazAtamasiTablosu(
-                    cihaz_id=cihaz.id, arac_id=arac.id, baslangic=atama_baslangici
-                ),
+                CihazAtamasiTablosu(cihaz_id=cihaz.id, arac_id=arac.id, baslangic=atama_baslangici),
             ]
         )
     oturum.add(
-        CihazAtamasiTablosu(
-            cihaz_id=durak_cihazi.id, durak_id=durak.id, baslangic=atama_baslangici
-        )
+        CihazAtamasiTablosu(cihaz_id=durak_cihazi.id, durak_id=durak.id, baslangic=atama_baslangici)
     )
 
     await oturum.commit()

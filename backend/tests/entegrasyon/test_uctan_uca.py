@@ -65,9 +65,7 @@ async def _sira_no_ile_olcumleri_bekle(
         eslesenler = []
         for arac in anlik:
             olcumler = (
-                await istemci.get(
-                    f"{API}/api/araclar/{arac['arac_id']}/olcumler", params=pencere
-                )
+                await istemci.get(f"{API}/api/araclar/{arac['arac_id']}/olcumler", params=pencere)
             ).json()
             eslesenler += [o for o in olcumler if o["sira_no"] == sira_no]
         if eslesenler:
@@ -172,5 +170,6 @@ async def test_tunel_gecikmeli_olcumler_cekim_damgasindaki_kovaya_iner() -> None
             )
         ).json()
 
-    # 45-35 dk önceki pencerede en az iki dolu kova olmalı (5 dk arayla üç ölçüm).
+    # 45-35 dk önceki pencerede üç ölçüm en az iki farklı 15dk kovasına dağılmalı.
     assert sum(nokta["olcum_sayisi"] for nokta in trend) >= 3
+    assert len([nokta for nokta in trend if nokta["olcum_sayisi"] > 0]) >= 2

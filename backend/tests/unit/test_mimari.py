@@ -58,8 +58,7 @@ def _ihlaller(katman: str, izinli_app_kokleri: set[str]) -> list[str]:
             if kok in sys.stdlib_module_names:
                 continue
             app_ici_izinli = kok == "app" and any(
-                modul == izinli or modul.startswith(izinli + ".")
-                for izinli in izinli_app_kokleri
+                modul == izinli or modul.startswith(izinli + ".") for izinli in izinli_app_kokleri
             )
             if app_ici_izinli:
                 continue

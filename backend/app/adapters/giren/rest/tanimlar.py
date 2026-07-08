@@ -21,6 +21,7 @@ from app.adapters.cikan.postgres.tablolar import (
     DurakTablosu,
     HatAtamasiTablosu,
     HatTablosu,
+    Taban,
 )
 from app.adapters.giren.rest.bagimliliklar import oturum_fabrikasini_getir
 from app.adapters.giren.rest.semalar import (
@@ -34,12 +35,10 @@ from app.adapters.giren.rest.semalar import (
 
 tanimlar_router = APIRouter(prefix="/api")
 
-OturumFabrikasi = Annotated[
-    async_sessionmaker[AsyncSession], Depends(oturum_fabrikasini_getir)
-]
+OturumFabrikasi = Annotated[async_sessionmaker[AsyncSession], Depends(oturum_fabrikasini_getir)]
 
 
-async def _kaydet(oturum_fabrikasi: async_sessionmaker[AsyncSession], satir) -> dict:
+async def _kaydet(oturum_fabrikasi: async_sessionmaker[AsyncSession], satir: Taban) -> dict:
     """Tek satırı kalıcılaştırır; kısıt ihlalini (mükerrer/eksik FK) 409'a çevirir."""
     try:
         async with oturum_fabrikasi() as oturum:
@@ -120,9 +119,7 @@ async def _atamayi_kaydet(
                 )
                 .values(bitis=simdi)
             )
-            satir = HatAtamasiTablosu(
-                hat_id=istek.hat_id, arac_id=istek.arac_id, baslangic=simdi
-            )
+            satir = HatAtamasiTablosu(hat_id=istek.hat_id, arac_id=istek.arac_id, baslangic=simdi)
         oturum.add(satir)
         await oturum.commit()
         return {"id": satir.id}

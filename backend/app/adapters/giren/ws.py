@@ -18,4 +18,7 @@ async def canli_yayin(websocket: WebSocket) -> None:
             # İstemciden veri beklenmez; receive yalnızca kopuşu algılamak için.
             await websocket.receive_text()
     except WebSocketDisconnect:
+        pass
+    finally:
+        # Her çıkış yolunda temizlik: beklenmeyen istisnada da bağlantı sette kalmasın.
         yonetici.kopar(websocket)

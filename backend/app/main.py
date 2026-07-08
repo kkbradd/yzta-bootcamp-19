@@ -66,9 +66,7 @@ def uygulama_olustur() -> FastAPI:
             canli_yayin=canli_yayin,
             esikler=esikler,
         )
-        cihaz_durum_isleyici = CihazDurumIsleyici(
-            anlik_durum=anlik_durum, canli_yayin=canli_yayin
-        )
+        cihaz_durum_isleyici = CihazDurumIsleyici(anlik_durum=anlik_durum, canli_yayin=canli_yayin)
 
         # Giren adaptör: MQTT dinleyicisi arka plan görevi olarak
         ingest = MqttIngest(ayarlar, olcum_isleyici, cihaz_durum_isleyici)

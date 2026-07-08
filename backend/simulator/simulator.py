@@ -51,7 +51,10 @@ async def cihaz_calistir(
         topic=durum_topic, payload=json.dumps({"cevrimici": False}), qos=1, retain=True
     )
 
-    sira_no = 0
+    # Gerçek cihazın kalıcı sayacını taklit et: çalıştırmalar arası monoton kalsın,
+    # yoksa yeniden başlatılan simülatörün tüm ölçümleri UNIQUE(cihaz_id, sira_no)
+    # nedeniyle mükerrer sayılır.
+    sira_no = int(time.time())
     bekleyenler: list[dict] = []
     tunel_bitisi = time.monotonic() + tunel_sn if tunel_sn > 0 else None
 
