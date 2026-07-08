@@ -9,7 +9,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.adapters.cikan.postgres.baglanti import motor_olustur, postgres_saglikli
+from app.adapters.cikan.postgres.baglanti import (
+    motor_olustur,
+    postgres_saglikli,
+    tablolari_olustur,
+)
 from app.adapters.cikan.redis_baglanti import redis_istemcisi_olustur, redis_saglikli
 from app.adapters.giren.mqtt_ingest import mqtt_saglikli
 from app.adapters.giren.rest.saglik import saglik_router
@@ -27,6 +31,7 @@ def uygulama_olustur() -> FastAPI:
     async def yasam_dongusu(uygulama: FastAPI) -> AsyncIterator[None]:
         ayarlar = Ayarlar()
         motor = motor_olustur(ayarlar.database_url)
+        await tablolari_olustur(motor)
         redis = redis_istemcisi_olustur(ayarlar.redis_url)
         uygulama.state.saglik_kontrolleri = {
             "postgres": lambda: postgres_saglikli(motor),
