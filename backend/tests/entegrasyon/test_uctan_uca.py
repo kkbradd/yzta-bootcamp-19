@@ -43,16 +43,37 @@ def _benzersiz_sira_no() -> int:
     return int(time.time() * 1000) % 1_000_000_000
 
 
-async def _hat34_ve_aracini_bul(istemci: httpx.AsyncClient) -> tuple[int, int]:
-    """Seed'deki 34 hattını ve o hatta anlık veri üreten ilk aracı döner."""
+async def _hat34_id(istemci: httpx.AsyncClient) -> int:
     hatlar = (await istemci.get(f"{API}/api/hatlar")).json()
-    hat = next(h for h in hatlar if h["hat_no"] == "34")
-    for _ in range(30):  # ingest asenkron: anlık verinin düşmesini bekle
-        anlik = (await istemci.get(f"{API}/api/hatlar/{hat['hat_id']}/anlik")).json()
-        if anlik:
-            return hat["hat_id"], anlik[0]["arac_id"]
+    return next(h["hat_id"] for h in hatlar if h["hat_no"] == "34")
+
+
+async def _sira_no_ile_olcumleri_bekle(
+    istemci: httpx.AsyncClient, hat_id: int, sira_no: int
+) -> list[dict]:
+    """Hattaki TÜM araçların ölçümlerinde sira_no'yu polling ile arar.
+
+    Hat 34'te birden fazla araç var ve ingest asenkron — belirli bir aracı
+    varsaymak yerine sira_no (benzersiz) hepsinde aranır.
+    """
+    pencere = {
+        "baslangic": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
+        "bitis": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
+    }
+    for _ in range(30):
+        anlik = (await istemci.get(f"{API}/api/hatlar/{hat_id}/anlik")).json()
+        eslesenler = []
+        for arac in anlik:
+            olcumler = (
+                await istemci.get(
+                    f"{API}/api/araclar/{arac['arac_id']}/olcumler", params=pencere
+                )
+            ).json()
+            eslesenler += [o for o in olcumler if o["sira_no"] == sira_no]
+        if eslesenler:
+            return eslesenler
         await asyncio.sleep(0.2)
-    raise AssertionError("hat 34 için anlık araç verisi oluşmadı")
+    return []
 
 
 async def test_saglik_tum_bagimliliklar_ok() -> None:
@@ -73,16 +94,9 @@ async def test_olcum_yayini_zenginlesip_kaydedilir_ve_mukerrer_elenir() -> None:
     await _yayinla("filo/edge_0001/yogunluk", yuk)  # mükerrer (QoS 1 taklidi)
 
     async with httpx.AsyncClient() as istemci:
-        _, arac_id = await _hat34_ve_aracini_bul(istemci)
-        pencere = {
-            "baslangic": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
-            "bitis": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
-        }
-        olcumler = (
-            await istemci.get(f"{API}/api/araclar/{arac_id}/olcumler", params=pencere)
-        ).json()
+        hat_id = await _hat34_id(istemci)
+        eslesenler = await _sira_no_ile_olcumleri_bekle(istemci, hat_id, sira_no)
 
-    eslesenler = [o for o in olcumler if o["sira_no"] == sira_no]
     assert len(eslesenler) == 1  # kabul kriteri #2: mükerrer publish tek satır
     assert eslesenler[0]["kisi_sayisi"] == 42
     assert eslesenler[0]["doluluk_orani"] is not None  # zenginleştirme çalıştı

@@ -6,7 +6,7 @@ yüklüyse hiçbir satır yazılmaz (bitti tanımı: satır sayıları değişme
 
 import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -47,7 +47,9 @@ async def tohumla(oturum: AsyncSession) -> bool:
     if hat_sayisi:
         return False
 
-    simdi = datetime.now(UTC)
+    # Atamalar geçmişten başlar: filo tohumdan önce de atanmıştı ve gecikmeli
+    # (tünel) ölçümlerin çekim damgaları atama penceresine düşebilmeli.
+    atama_baslangici = datetime.now(UTC) - timedelta(days=2)
 
     # Evre 1 — varlıklar: FK hedefleri tek flush ile veritabanına iner.
     hatlar = {hat_no: HatTablosu(hat_no=hat_no, ad=ad) for hat_no, ad in HATLAR}
@@ -70,11 +72,19 @@ async def tohumla(oturum: AsyncSession) -> bool:
     for (_, _, _, hat_no), arac, cihaz in zip(ARACLAR, araclar, arac_cihazlari, strict=True):
         oturum.add_all(
             [
-                HatAtamasiTablosu(hat_id=hatlar[hat_no].id, arac_id=arac.id, baslangic=simdi),
-                CihazAtamasiTablosu(cihaz_id=cihaz.id, arac_id=arac.id, baslangic=simdi),
+                HatAtamasiTablosu(
+                    hat_id=hatlar[hat_no].id, arac_id=arac.id, baslangic=atama_baslangici
+                ),
+                CihazAtamasiTablosu(
+                    cihaz_id=cihaz.id, arac_id=arac.id, baslangic=atama_baslangici
+                ),
             ]
         )
-    oturum.add(CihazAtamasiTablosu(cihaz_id=durak_cihazi.id, durak_id=durak.id, baslangic=simdi))
+    oturum.add(
+        CihazAtamasiTablosu(
+            cihaz_id=durak_cihazi.id, durak_id=durak.id, baslangic=atama_baslangici
+        )
+    )
 
     await oturum.commit()
     return True
