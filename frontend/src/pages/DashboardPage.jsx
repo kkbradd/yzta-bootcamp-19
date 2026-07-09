@@ -160,7 +160,7 @@ export default function DashboardPage({ onNavigate }) {
             <div style={styles.mapCard}>
               <div style={styles.cardHeader}>
                 <div>
-                  <div style={styles.cardTitle}>Canlı Şehir Takibi</div>
+                  <div style={styles.cardTitle}>Canlı Harita</div>
                   <div style={styles.cardSubtitle}>Gerçek zamanlı araç doluluk oranları ve durak durumu</div>
                 </div>
                 <div style={styles.mapLegend}>
