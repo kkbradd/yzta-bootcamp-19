@@ -18,27 +18,27 @@ export default function LiveMapPage({ onNavigate }) {
               { key: 'lines', label: 'Hatlar', icon: '⊟' },
               { key: 'stops', label: 'Duraklar', icon: '📍' },
             ].map(item => (
-              <button
+              <div
                 key={item.key}
                 style={{ ...s.navItem, ...(item.active ? s.navItemActive : {}) }}
                 onClick={() => onNavigate && onNavigate(item.key)}
               >
                 <span style={s.navIcon}>{item.icon}</span>
                 <span>{item.label}</span>
-              </button>
+              </div>
             ))}
           </nav>
         </div>
 
         <div style={s.sidebarBottom}>
-          <button style={s.navItem}>
+          <div style={s.navItem}>
             <span style={s.navIcon}>👤</span>
             <span>Admin</span>
-          </button>
-          <button style={s.navItem} onClick={() => onNavigate && onNavigate('logout')}>
+          </div>
+          <div style={{ ...s.navItem, cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('logout')}>
             <span style={s.navIcon}>→</span>
             <span>Çıkış Yap</span>
-          </button>
+          </div>
         </div>
       </div>
 
