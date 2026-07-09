@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useClock } from '../hooks/useClock'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
@@ -56,6 +57,7 @@ const CustomTooltip = ({ active, payload, label, range }) => {
 }
 
 export default function DashboardPage({ onNavigate }) {
+  const time = useClock()
   const [selectedRange, setSelectedRange] = useState('24h')
   const [selectedRoute, setSelectedRoute] = useState('all')
 
@@ -125,7 +127,7 @@ export default function DashboardPage({ onNavigate }) {
           <div style={styles.topbarRight}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Son Güncelleme</div>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>⏱ 14:32:05</div>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>⏱ {time}</div>
             </div>
             <div style={styles.avatar}>A</div>
           </div>
