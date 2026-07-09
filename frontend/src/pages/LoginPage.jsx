@@ -1,13 +1,13 @@
 import { useState } from 'react'
 const busBg = '/otobus.png'
 
-export default function LoginPage() {
+export default function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // auth logic buraya
+    if (onLogin) onLogin()
   }
 
   return (
