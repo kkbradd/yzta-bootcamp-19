@@ -88,6 +88,15 @@ export default function LiveMapPage({ onNavigate }) {
             </div>
           </div>
         </div>
+
+        <footer style={s.footer}>
+          <span>© 2026 YOTAY — Belediye Operasyon Merkezi</span>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <a href="#" style={s.footerLink}>Kullanım Şartları</a>
+            <a href="#" style={s.footerLink}>Gizlilik Politikası</a>
+            <a href="#" style={s.footerLink}>Destek</a>
+          </div>
+        </footer>
       </div>
     </div>
   )
@@ -122,4 +131,6 @@ const s = {
   mapPlaceholderIcon: { fontSize: '32px', opacity: 0.3 },
   mapPlaceholderText: { fontSize: '14px', fontWeight: '500', color: '#9ca3af' },
   mapPlaceholderSub: { fontSize: '12px', color: '#d1d5db' },
+  footer: { padding: '12px 24px', borderTop: '1px solid #e5e7eb', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#9ca3af', flexShrink: 0 },
+  footerLink: { color: '#9ca3af', textDecoration: 'none' },
 }
