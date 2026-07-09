@@ -1,4 +1,7 @@
+import { useClock } from '../hooks/useClock'
+
 export default function LiveMapPage({ onNavigate }) {
+  const time = useClock()
   return (
     <div style={s.root}>
       {/* Sidebar */}
@@ -66,7 +69,7 @@ export default function LiveMapPage({ onNavigate }) {
           <div style={s.topbarRight}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Son Güncelleme</div>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>⏱ 14:32:05</div>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>⏱ {time}</div>
             </div>
             <div style={s.avatar}>A</div>
           </div>
