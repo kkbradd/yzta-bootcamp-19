@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HAT 01 — Proje Günlüğü</title>
+<style>
+  :root{
+    --yan-bg:#12141c;
+    --yan-metin:#c3cad6;
+    --yan-metin-soluk:#7c869a;
+    --yan-aktif-bg:#1c2130;
+    --vurgu:#6366f1;
+    --icerik-bg:#ffffff;
+    --icerik-metin:#1f2937;
+    --cizgi:#e5e7eb;
+    --kod-bg:#f4f5f7;
+    --yan-genislik:284px;
+    --ust-yukseklik:52px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"IBM Plex Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);color:var(--icerik-metin);background:var(--icerik-bg)}
+
+  .duzen{display:grid;grid-template-columns:var(--yan-genislik) 1fr;height:100vh}
+
+  /* ---- Sol panel ---- */
+  .yan{background:var(--yan-bg);color:var(--yan-metin);display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid #000}
+  .marka{padding:20px 20px 16px;border-bottom:1px solid #23283a;display:flex;gap:12px;align-items:center}
+  .marka svg{flex:0 0 auto}
+  .marka b{display:block;font-size:15px;color:#fff;letter-spacing:.2px}
+  .marka span{display:block;font-size:12px;color:var(--yan-metin-soluk);margin-top:2px}
+  nav{padding:12px 10px 24px;flex:1 1 auto}
+  .grup{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--yan-metin-soluk);padding:16px 12px 6px;font-weight:700}
+  .grup:first-child{padding-top:6px}
+  nav a{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:1px 0;border-radius:8px;color:var(--yan-metin);text-decoration:none;font-size:14px;line-height:1.3;border-left:2px solid transparent}
+  nav a:hover{background:#181c28;color:#fff}
+  nav a.aktif{background:var(--yan-aktif-bg);color:#fff;border-left-color:var(--vurgu)}
+  nav a .nokta{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5;flex:0 0 auto}
+  nav a.aktif .nokta{opacity:1;background:var(--vurgu)}
+  .yan-alt{padding:14px 20px;border-top:1px solid #23283a;font-size:11px;color:var(--yan-metin-soluk)}
+
+  /* ---- Ana alan ---- */
+  .ana{display:flex;flex-direction:column;min-width:0;height:100vh}
+  .ust{height:var(--ust-yukseklik);flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--cizgi);background:#fff}
+  .ust h1{font-size:15px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ust .ara{flex:1 1 auto}
+  .ust a.disari{font-size:13px;color:var(--vurgu);text-decoration:none;white-space:nowrap}
+  .ust a.disari:hover{text-decoration:underline}
+  .menu-btn{display:none;background:none;border:0;cursor:pointer;padding:6px;margin-left:-6px}
+  .menu-btn span{display:block;width:20px;height:2px;background:#374151;margin:4px 0;border-radius:2px}
+
+  .icerik{flex:1 1 auto;min-height:0;position:relative;overflow:auto;background:#fbfbfc}
+  iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+
+  /* ---- Markdown yazı ---- */
+  .yazi{max-width:840px;margin:0 auto;padding:40px 44px 80px;background:transparent}
+  .yazi h1,.yazi h2,.yazi h3,.yazi h4{line-height:1.25;margin:1.6em 0 .5em;font-weight:700}
+  .yazi h1{font-size:30px;margin-top:.2em;border-bottom:1px solid var(--cizgi);padding-bottom:.3em}
+  .yazi h2{font-size:23px;border-bottom:1px solid var(--cizgi);padding-bottom:.25em}
+  .yazi h3{font-size:18px}
+  .yazi h4{font-size:15px;color:#4b5563}
+  .yazi p{margin:.85em 0;line-height:1.75}
+  .yazi a{color:var(--vurgu);text-decoration:none}
+  .yazi a:hover{text-decoration:underline}
+  .yazi ul,.yazi ol{padding-left:1.5em;line-height:1.7}
+  .yazi li{margin:.3em 0}
+  .yazi code{font-family:var(--mono);font-size:.88em;background:var(--kod-bg);padding:.15em .4em;border-radius:5px;border:1px solid #eceef1}
+  .yazi pre{background:#0f1420;color:#e6e9ef;padding:16px 18px;border-radius:10px;overflow:auto;line-height:1.55}
+  .yazi pre code{background:none;border:0;padding:0;color:inherit;font-size:13px}
+  .yazi blockquote{margin:1em 0;padding:.4em 1.1em;border-left:3px solid var(--vurgu);background:#f7f7ff;color:#4b5563;border-radius:0 8px 8px 0}
+  .yazi blockquote p{margin:.4em 0}
+  .yazi hr{border:0;border-top:1px solid var(--cizgi);margin:2em 0}
+  .yazi table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:14px;display:block;overflow-x:auto}
+  .yazi th,.yazi td{border:1px solid var(--cizgi);padding:8px 12px;text-align:left}
+  .yazi th{background:#f7f8fa;font-weight:600}
+  .yazi tr:nth-child(even) td{background:#fafbfc}
+  .yazi img{max-width:100%;border-radius:8px}
+  .yazi .bos,.mesaj{max-width:620px;margin:60px auto;padding:24px 28px;border:1px dashed var(--cizgi);border-radius:12px;color:#6b7280;background:#fff;line-height:1.7}
+  .mesaj code{font-family:var(--mono);background:var(--kod-bg);padding:.12em .4em;border-radius:5px}
+
+  /* ---- Mobil ---- */
+  .perde{display:none}
+  @media(max-width:860px){
+    .duzen{grid-template-columns:1fr}
+    .yan{position:fixed;top:0;left:0;bottom:0;width:var(--yan-genislik);z-index:40;transform:translateX(-100%);transition:transform .22s ease}
+    .yan.acik{transform:none}
+    .menu-btn{display:block}
+    .perde.acik{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:30}
+    .yazi{padding:28px 20px 60px}
+  }
+</style>
+</head>
+<body>
+<div class="duzen">
+  <!-- ================= SOL PANEL ================= -->
+  <aside class="yan" id="yan">
+    <div class="marka">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="4" width="18" height="12" rx="2.5" fill="#6366f1"/>
+        <rect x="5.5" y="6.5" width="5" height="4" rx="1" fill="#c7d2fe"/>
+        <rect x="13.5" y="6.5" width="5" height="4" rx="1" fill="#c7d2fe"/>
+        <circle cx="8" cy="18" r="2" fill="#fff"/>
+        <circle cx="16" cy="18" r="2" fill="#fff"/>
+        <circle cx="8" cy="18" r="1" fill="#12141c"/>
+        <circle cx="16" cy="18" r="1" fill="#12141c"/>
+      </svg>
+      <div>
+        <b>HAT 01</b>
+        <span>Otobüs Yoğunluk · Proje Günlüğü</span>
+      </div>
+    </div>
+    <nav id="menu"><!-- menü buraya JS ile basılır --></nav>
+    <div class="yan-alt">Süreç boyunca güncellenir · <span id="sayfa-adet">0</span> sayfa</div>
+  </aside>
+  <div class="perde" id="perde"></div>
+
+  <!-- ================= ANA ALAN ================= -->
+  <main class="ana">
+    <header class="ust">
+      <button class="menu-btn" id="menu-btn" aria-label="Menü"><span></span><span></span><span></span></button>
+      <h1 id="baslik">—</h1>
+      <div class="ara"></div>
+      <a class="disari" id="disari" href="#" target="_blank" rel="noopener" style="display:none">Yeni sekmede aç ↗</a>
+    </header>
+    <section class="icerik" id="icerik"></section>
+  </main>
+</div>
+
+<script>
+/* =====================================================================
+   SAYFALAR — YENİ SAYFA EKLEMEK İÇİN BURAYA BİR SATIR EKLE.
+   - html dosyaları iframe içinde (kendi tasarımıyla) açılır
+   - md  dosyaları site içinde render edilir
+   - { grup: "..." } başlık satırı ekler (isteğe bağlı)
+   ===================================================================== */
+const SAYFALAR = [
+  { grup: "Genel" },
+  { baslik: "Genel Bakış",  dosya: "genel-bakis.md" },
+  { baslik: "Görsel Özet",  dosya: "otobus_yogunluk_gorsel_ozet_1.html" },
+
+  // { grup: "Tasarım" },
+  // { baslik: "Mimari",     dosya: "mimari.md" },
+  // { baslik: "Veri Seti",  dosya: "veri-seti.md" },
+];
+
+/* ---------------------------------------------------------------------
+   Aşağısı motor — sayfa eklemek için buraya dokunmana gerek yok.
+   --------------------------------------------------------------------- */
+function slug(s){
+  return s.toLowerCase()
+    .replace(/ç/g,"c").replace(/ğ/g,"g").replace(/ı/g,"i")
+    .replace(/ö/g,"o").replace(/ş/g,"s").replace(/ü/g,"u")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+}
+const sayfalar = SAYFALAR.filter(s=>s.dosya).map(s=>({...s, id: s.id || slug(s.baslik)}));
+
+/* ---- Menü ---- */
+const menu = document.getElementById("menu");
+SAYFALAR.forEach(s=>{
+  if(s.grup){
+    const g=document.createElement("div"); g.className="grup"; g.textContent=s.grup; menu.appendChild(g); return;
+  }
+  const id = s.id || slug(s.baslik);
+  const a=document.createElement("a");
+  a.href="#"+id; a.dataset.id=id;
+  a.innerHTML='<span class="nokta"></span><span>'+s.baslik+'</span>';
+  menu.appendChild(a);
+});
+document.getElementById("sayfa-adet").textContent = sayfalar.length;
+
+/* ---- Markdown -> HTML (bağımsız, hafif çevirici) ---- */
+function kacir(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function satirIci(s){
+  const kodlar=[];
+  s=s.replace(/`([^`]+)`/g,(m,c)=>{kodlar.push(c);return ""+(kodlar.length-1)+";";});
+  s=s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,'<img src="$2" alt="$1">');
+  s=s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,(m,t,h)=>'<a href="'+h+'"'+(/^https?:/.test(h)?' target="_blank" rel="noopener"':'')+'>'+t+'</a>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+  s=s.replace(/\*([^*]+)\*/g,"<em>$1</em>");
+  s=s.replace(/~~([^~]+)~~/g,"<del>$1</del>");
+  s=s.replace(/(\d+);/g,(m,i)=>"<code>"+kodlar[i]+"</code>");
+  return s;
+}
+function listeCiz(satirlar){
+  const ordered=/^\s*\d+\.\s+/.test(satirlar[0]);
+  let html="<"+(ordered?"ol":"ul")+">";
+  for(let j=0;j<satirlar.length;j++){
+    const m=satirlar[j].match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+    if(!m){continue;}
+    const girinti=m[1].length, icerik=m[3];
+    const ic=[];
+    while(j+1<satirlar.length && (satirlar[j+1].match(/^(\s*)/)[1].length)>girinti){ic.push(satirlar[j+1]); j++;}
+    html+="<li>"+satirIci(icerik)+(ic.length?listeCiz(ic):"")+"</li>";
+  }
+  return html+"</"+(ordered?"ol":"ul")+">";
+}
+function mdToHtml(ham){
+  const metin=kacir(ham.replace(/\r\n?/g,"\n"));
+  const L=metin.split("\n"); let html="", i=0;
+  while(i<L.length){
+    const line=L[i];
+    if(/^```/.test(line)){
+      const dil=line.slice(3).trim(); i++; const buf=[];
+      while(i<L.length && !/^```/.test(L[i])){buf.push(L[i]); i++;} i++;
+      html+="<pre><code"+(dil?' class="dil-'+dil+'"':"")+">"+buf.join("\n")+"</code></pre>"; continue;
+    }
+    const h=line.match(/^(#{1,6})\s+(.*)$/);
+    if(h){const lv=h[1].length; html+="<h"+lv+">"+satirIci(h[2].trim())+"</h"+lv+">"; i++; continue;}
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)){html+="<hr>"; i++; continue;}
+    if(/^>\s?/.test(line)){
+      const buf=[]; while(i<L.length && /^>\s?/.test(L[i])){buf.push(L[i].replace(/^>\s?/,"")); i++;}
+      html+="<blockquote>"+mdToHtml(buf.join("\n"))+"</blockquote>"; continue;
+    }
+    if(/^\|.*\|/.test(line) && i+1<L.length && /^\|?[\s:|-]+\|[\s:|-]*$/.test(L[i+1])){
+      const hucre=r=>r.replace(/^\|/,"").replace(/\|$/,"").split("|").map(c=>c.trim());
+      const bas=hucre(line);
+      const hiza=hucre(L[i+1]).map(c=>{const l=c.startsWith(":"),r=c.endsWith(":");return l&&r?"center":r?"right":l?"left":"";});
+      i+=2; const sat=[];
+      while(i<L.length && /^\|.*\|/.test(L[i])){sat.push(hucre(L[i])); i++;}
+      let t="<table><thead><tr>"+bas.map((b,k)=>"<th"+(hiza[k]?' style="text-align:'+hiza[k]+'"':"")+">"+satirIci(b)+"</th>").join("")+"</tr></thead><tbody>";
+      sat.forEach(r=>{t+="<tr>"+r.map((c,k)=>"<td"+(hiza[k]?' style="text-align:'+hiza[k]+'"':"")+">"+satirIci(c)+"</td>").join("")+"</tr>";});
+      html+=t+"</tbody></table>"; continue;
+    }
+    if(/^\s*([-*+]|\d+\.)\s+/.test(line)){
+      const buf=[]; while(i<L.length && /^\s*([-*+]|\d+\.)\s+/.test(L[i])){buf.push(L[i]); i++;}
+      html+=listeCiz(buf); continue;
+    }
+    if(/^\s*$/.test(line)){i++; continue;}
+    const buf=[line]; i++;
+    while(i<L.length && !/^\s*$/.test(L[i]) && !/^(#{1,6}\s|>|```|\s*([-*+]|\d+\.)\s|\|)/.test(L[i])){buf.push(L[i]); i++;}
+    html+="<p>"+satirIci(buf.join(" "))+"</p>";
+  }
+  return html;
+}
+
+/* ---- Yönlendirme / gösterim ---- */
+const icerik=document.getElementById("icerik");
+const baslikEl=document.getElementById("baslik");
+const disariEl=document.getElementById("disari");
+
+function sayfaGoster(id){
+  const s = sayfalar.find(x=>x.id===id) || sayfalar[0];
+  if(!s){icerik.innerHTML='<div class="mesaj">Henüz sayfa yok. <code>SAYFALAR</code> listesine bir madde ekle.</div>'; return;}
+  document.querySelectorAll("#menu a").forEach(a=>a.classList.toggle("aktif", a.dataset.id===s.id));
+  baslikEl.textContent=s.baslik;
+  disariEl.href=s.dosya; disariEl.style.display="";
+  document.title="HAT 01 · "+s.baslik;
+
+  if(/\.md$/i.test(s.dosya)){
+    icerik.innerHTML='<div class="yazi"><p style="color:#9ca3af">Yükleniyor…</p></div>';
+    fetch(s.dosya).then(r=>{if(!r.ok) throw new Error(r.status); return r.text();})
+      .then(t=>{icerik.innerHTML='<article class="yazi">'+mdToHtml(t)+'</article>'; icerik.scrollTop=0;})
+      .catch(()=>{icerik.innerHTML='<div class="mesaj"><b>Markdown yüklenemedi.</b><br><br>'+
+        'Dosya <code>file://</code> ile açıldığında tarayıcı <code>.md</code> okumasını engeller. '+
+        'Yerelde önizlemek için proje kökünde bir sunucu çalıştır:<br><br>'+
+        '<code>python3 -m http.server 4173</code><br><br>'+
+        've <code>http://localhost:4173/docs/</code> adresini aç. GitHub Pages’te bu sorun olmadan çalışır.</div>';});
+  }else{
+    icerik.innerHTML='<iframe src="'+s.dosya+'" title="'+s.baslik+'"></iframe>';
+  }
+  if(window.innerWidth<=860) yanKapat();
+}
+
+/* ---- Mobil menü ---- */
+const yan=document.getElementById("yan"), perde=document.getElementById("perde");
+function yanAc(){yan.classList.add("acik"); perde.classList.add("acik");}
+function yanKapat(){yan.classList.remove("acik"); perde.classList.remove("acik");}
+document.getElementById("menu-btn").addEventListener("click",yanAc);
+perde.addEventListener("click",yanKapat);
+
+/* ---- Başlat ---- */
+function yonlen(){sayfaGoster((location.hash||"").replace(/^#/,""));}
+window.addEventListener("hashchange",yonlen);
+yonlen();
+</script>
+</body>
+</html>
