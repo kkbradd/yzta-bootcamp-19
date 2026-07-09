@@ -55,7 +55,7 @@ const CustomTooltip = ({ active, payload, label, range }) => {
   return null
 }
 
-export default function DashboardPage() {
+export default function DashboardPage({ onNavigate }) {
   const [selectedRange, setSelectedRange] = useState('24h')
   const [selectedRoute, setSelectedRoute] = useState('all')
 
@@ -76,12 +76,13 @@ export default function DashboardPage() {
 
         <nav style={styles.nav}>
           {[
-            { icon: '⊞', label: 'Dashboard', active: true },
-            { icon: '🗺', label: 'Canlı Harita' },
-            { icon: '⊟', label: 'Hatlar' },
-            { icon: '📍', label: 'Duraklar' },
+            { icon: '⊞', label: 'Dashboard', active: true, key: 'dashboard' },
+            { icon: '🗺', label: 'Canlı Harita', key: 'live-map' },
+            { icon: '⊟', label: 'Hatlar', key: 'lines' },
+            { icon: '📍', label: 'Duraklar', key: 'stops' },
           ].map(item => (
-            <div key={item.label} style={{ ...styles.navItem, ...(item.active ? styles.navItemActive : {}) }}>
+            <div key={item.label} style={{ ...styles.navItem, ...(item.active ? styles.navItemActive : {}), cursor: 'pointer' }}
+              onClick={() => onNavigate && onNavigate(item.key)}>
               <span style={styles.navIcon}>{item.icon}</span>
               <span>{item.label}</span>
             </div>
@@ -93,7 +94,7 @@ export default function DashboardPage() {
             <span style={styles.navIcon}>👤</span>
             <span>Admin</span>
           </div>
-          <div style={styles.navItem}>
+          <div style={{ ...styles.navItem, cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('logout')}>
             <span style={styles.navIcon}>→</span>
             <span>Çıkış Yap</span>
           </div>
@@ -159,7 +160,7 @@ export default function DashboardPage() {
             <div style={styles.mapCard}>
               <div style={styles.cardHeader}>
                 <div>
-                  <div style={styles.cardTitle}>Canlı Şehir Takibi</div>
+                  <div style={styles.cardTitle}>Canlı Harita</div>
                   <div style={styles.cardSubtitle}>Gerçek zamanlı araç doluluk oranları ve durak durumu</div>
                 </div>
                 <div style={styles.mapLegend}>
@@ -331,7 +332,7 @@ const styles = {
     display: 'flex', alignItems: 'center', gap: '8px',
     padding: '0 20px 24px', borderBottom: '1px solid #f3f4f6',
   },
-  sidebarLogoText: { fontSize: '13px', fontWeight: '700', color: '#111827', lineHeight: 1.3 },
+  sidebarLogoText: { fontSize: '20px', fontWeight: '700', color: '#111827', letterSpacing: '0.02em' },
   nav: { flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '2px' },
   navItem: {
     display: 'flex', alignItems: 'center', gap: '10px',
