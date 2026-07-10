@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import LiveMapPage from './pages/LiveMapPage'
 import LinesPage from './pages/LinesPage'
+import StopsPage from './pages/StopsPage'
 import './index.css'
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
   if (page === 'login') return <LoginPage onLogin={() => setPage('dashboard')} />
   if (page === 'live-map') return <LiveMapPage onNavigate={nav} />
   if (page === 'lines') return <LinesPage onNavigate={nav} />
+  if (page === 'stops') return <StopsPage onNavigate={nav} />
   return <DashboardPage onNavigate={nav} />
 }
 
