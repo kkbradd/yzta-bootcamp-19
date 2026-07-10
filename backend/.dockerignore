@@ -1,0 +1,6 @@
+# Yalnızca imaj için gerekenler build bağlamına girer (allowlist yaklaşımı).
+*
+!pyproject.toml
+!uv.lock
+!app
+**/__pycache__

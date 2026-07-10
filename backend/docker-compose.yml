@@ -1,0 +1,48 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: hat01
+      POSTGRES_PASSWORD: hat01
+      POSTGRES_DB: hat01
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hat01 -d hat01"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+      REDIS_URL: redis://redis:6379/0
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started

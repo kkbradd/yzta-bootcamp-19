@@ -1,8 +1,20 @@
+import { useState } from 'react'
 import LoginPage from './pages/LoginPage'
+import DashboardPage from './pages/DashboardPage'
+import LiveMapPage from './pages/LiveMapPage'
+import LinesPage from './pages/LinesPage'
+import StopsPage from './pages/StopsPage'
 import './index.css'
 
 function App() {
-  return <LoginPage />
+  const [page, setPage] = useState('login')
+  const nav = (p) => setPage(p === 'logout' ? 'login' : p)
+
+  if (page === 'login') return <LoginPage onLogin={() => setPage('dashboard')} />
+  if (page === 'live-map') return <LiveMapPage onNavigate={nav} />
+  if (page === 'lines') return <LinesPage onNavigate={nav} />
+  if (page === 'stops') return <StopsPage onNavigate={nav} />
+  return <DashboardPage onNavigate={nav} />
 }
 
 export default App

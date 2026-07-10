@@ -1,13 +1,13 @@
 import { useState } from 'react'
 const busBg = '/otobus.png'
 
-export default function LoginPage() {
+export default function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // auth logic buraya
+    if (onLogin) onLogin()
   }
 
   return (
@@ -126,7 +126,7 @@ const styles = {
   },
   left: {
     position: 'relative',
-    flex: '0 0 60%',
+    flex: '0 0 55%',
     backgroundImage: `url(${busBg})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center bottom',
@@ -220,64 +220,64 @@ const styles = {
     fontSize: '12px',
   },
   right: {
-    flex: '0 0 40%',
+    flex: '0 0 45%',
     background: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '40px',
+    padding: '48px',
   },
   formContainer: {
     width: '100%',
-    maxWidth: '380px',
+    maxWidth: '560px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
+    gap: '28px',
   },
   formHeader: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '8px',
   },
   formTitle: {
-    fontSize: '28px',
+    fontSize: '34px',
     fontWeight: '700',
     color: '#111827',
   },
   formSubtitle: {
-    fontSize: '14px',
+    fontSize: '15px',
     color: '#6b7280',
   },
   card: {
     background: '#ffffff',
     border: '1px solid #e5e7eb',
     borderRadius: '16px',
-    padding: '28px',
+    padding: '44px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
   },
   cardTitle: {
-    fontSize: '18px',
+    fontSize: '22px',
     fontWeight: '600',
     color: '#111827',
-    marginBottom: '4px',
+    marginBottom: '6px',
   },
   cardSubtitle: {
-    fontSize: '13px',
+    fontSize: '15px',
     color: '#9ca3af',
-    marginBottom: '24px',
+    marginBottom: '32px',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '18px',
+    gap: '22px',
   },
   fieldGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '7px',
   },
   label: {
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: '500',
     color: '#374151',
   },
@@ -293,22 +293,22 @@ const styles = {
   },
   inputIcon: {
     position: 'absolute',
-    left: '12px',
+    left: '14px',
     pointerEvents: 'none',
   },
   input: {
     width: '100%',
-    padding: '11px 14px 11px 38px',
+    padding: '15px 16px 15px 44px',
     border: '1px solid #e5e7eb',
     borderRadius: '10px',
-    fontSize: '14px',
+    fontSize: '15px',
     color: '#111827',
     outline: 'none',
     transition: 'border-color 0.2s',
     background: '#fafafa',
   },
   forgotLink: {
-    fontSize: '12px',
+    fontSize: '13px',
     color: '#6b7280',
     textDecoration: 'none',
   },
@@ -318,19 +318,19 @@ const styles = {
     justifyContent: 'center',
     gap: '8px',
     width: '100%',
-    padding: '13px',
+    padding: '17px',
     background: '#111827',
     color: 'white',
     border: 'none',
     borderRadius: '10px',
-    fontSize: '15px',
+    fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
     marginTop: '4px',
     transition: 'background 0.2s',
   },
   notice: {
-    fontSize: '12px',
+    fontSize: '13px',
     color: '#9ca3af',
     textAlign: 'center',
     lineHeight: '1.6',
