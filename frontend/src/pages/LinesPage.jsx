@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useClock } from '../hooks/useClock'
+import { hatlariGetir } from '../api/hatlar'
+import { API_TABANI } from '../api/client'
 
+// Mock veri — SİLİNMEDİ; backend'e ulaşılamazsa yedek (demo) olarak kullanılır.
 const lines = [
   { code: '501', route: 'Üniversite - Şehir Terminali', duration: 45, stops: 24, buses: 8, status: 'orta' },
   { code: '34A', route: 'Sanayi Mahallesi - Hastane', duration: 35, stops: 18, buses: 5, status: 'yuksek' },
@@ -11,16 +14,33 @@ const lines = [
 ]
 
 const statusConfig = {
-  yuksek: { label: 'Yüksek Doluluk', bg: '#fef2f2', color: '#ef4444', border: '#ef4444' },
-  orta:   { label: 'Orta Doluluk',   bg: '#fffbeb', color: '#f59e0b', border: '#f59e0b' },
-  dusuk:  { label: 'Düşük Doluluk',  bg: '#f0fdf4', color: '#22c55e', border: '#22c55e' },
+  yuksek:  { label: 'Yüksek Doluluk', bg: '#fef2f2', color: '#ef4444', border: '#ef4444' },
+  orta:    { label: 'Orta Doluluk',   bg: '#fffbeb', color: '#f59e0b', border: '#f59e0b' },
+  dusuk:   { label: 'Düşük Doluluk',  bg: '#f0fdf4', color: '#22c55e', border: '#22c55e' },
+  veriyok: { label: 'Veri Yok',       bg: '#f3f4f6', color: '#9ca3af', border: '#d1d5db' },
 }
+
+// Mock 'lines' -> kart şekli (backend başarısız olursa yedek olarak render edilir).
+const DEMO_HATLAR = lines.map((l) => ({
+  hat_id: l.code, code: l.code, route: l.route, buses: l.buses, durum: l.status,
+}))
 
 export default function LinesPage({ onNavigate }) {
   const time = useClock()
   const [search, setSearch] = useState('')
+  const [hatlar, setHatlar] = useState([])
+  const [asama, setAsama] = useState('yukleniyor') // 'yukleniyor' | 'hazir' | 'demo'
 
-  const filtered = lines.filter(l =>
+  useEffect(() => {
+    let iptal = false
+    setAsama('yukleniyor')
+    hatlariGetir()
+      .then((veri) => { if (!iptal) { setHatlar(veri); setAsama('hazir') } })
+      .catch(() => { if (!iptal) { setHatlar(DEMO_HATLAR); setAsama('demo') } })
+    return () => { iptal = true }
+  }, [])
+
+  const filtered = hatlar.filter((l) =>
     l.code.toLowerCase().includes(search.toLowerCase()) ||
     l.route.toLowerCase().includes(search.toLowerCase())
   )
@@ -119,74 +139,85 @@ export default function LinesPage({ onNavigate }) {
             </div>
           </div>
 
-          {/* Grid */}
-          <div style={s.grid}>
-            {filtered.map(line => {
-              const st = statusConfig[line.status]
-              return (
-                <div key={line.code} style={{ ...s.card, borderLeftColor: st.border }}>
-                  <div style={s.cardTop}>
-                    <div style={s.cardTopLeft}>
-                      <div style={s.busIconWrap}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                          <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-                          <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
-                        </svg>
+          {/* Durumlar / grid */}
+          {asama === 'yukleniyor' && <div style={s.durumKutu}>Hatlar yükleniyor…</div>}
+          {asama === 'demo' && (
+            <div style={s.demoBanner}>
+              Backend'e ulaşılamadı — demo verisi gösteriliyor ({API_TABANI})
+            </div>
+          )}
+          {asama !== 'yukleniyor' && filtered.length === 0 && (
+            <div style={s.durumKutu}>Hat bulunamadı.</div>
+          )}
+          {asama !== 'yukleniyor' && filtered.length > 0 && (
+            <div style={s.grid}>
+              {filtered.map(line => {
+                const st = statusConfig[line.durum]
+                return (
+                  <div key={line.hat_id} style={{ ...s.card, borderLeftColor: st.border }}>
+                    <div style={s.cardTop}>
+                      <div style={s.cardTopLeft}>
+                        <div style={s.busIconWrap}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                            <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                            <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <div style={s.lineCode}>{line.code}</div>
+                          <div style={s.lineCodeLabel}>HAT KODU</div>
+                        </div>
+                      </div>
+                      <span style={{ ...s.statusBadgeCard, background: st.bg, color: st.color }}>{st.label}</span>
+                    </div>
+
+                    <div style={s.cardDivider} />
+
+                    <div style={s.routeName}>{line.route}</div>
+                    <div style={s.duration}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      Ortalama Sefer Süresi: —
+                    </div>
+
+                    <div style={s.cardDivider} />
+
+                    <div style={s.stats}>
+                      <div>
+                        <div style={s.statLabel}>DURAK SAYISI</div>
+                        <div style={s.statValue}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                          </svg>
+                          —
+                        </div>
                       </div>
                       <div>
-                        <div style={s.lineCode}>{line.code}</div>
-                        <div style={s.lineCodeLabel}>HAT KODU</div>
+                        <div style={s.statLabel}>AKTİF OTOBÜS</div>
+                        <div style={s.statValue}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                            <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                            <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                          </svg>
+                          {line.buses}
+                        </div>
                       </div>
                     </div>
-                    <span style={{ ...s.statusBadgeCard, background: st.bg, color: st.color }}>{st.label}</span>
-                  </div>
 
-                  <div style={s.cardDivider} />
+                    <div style={s.cardDivider} />
 
-                  <div style={s.routeName}>{line.route}</div>
-                  <div style={s.duration}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                    Ortalama Sefer Süresi: {line.duration} dk
-                  </div>
-
-                  <div style={s.cardDivider} />
-
-                  <div style={s.stats}>
-                    <div>
-                      <div style={s.statLabel}>DURAK SAYISI</div>
-                      <div style={s.statValue}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                        </svg>
-                        {line.stops}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={s.statLabel}>AKTİF OTOBÜS</div>
-                      <div style={s.statValue}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                          <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-                          <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
-                        </svg>
-                        {line.buses}
-                      </div>
+                    <div style={s.cardFooter}>
+                      <span style={s.detailLink}>Detayları Görüntüle</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                      </svg>
                     </div>
                   </div>
-
-                  <div style={s.cardDivider} />
-
-                  <div style={s.cardFooter}>
-                    <span style={s.detailLink}>Detayları Görüntüle</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                    </svg>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <footer style={s.footer}>
@@ -223,6 +254,8 @@ const s = {
   topbarMeta: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#6b7280' },
   avatar: { width: '34px', height: '34px', borderRadius: '50%', background: '#111827', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '600' },
   content: { flex: 1, overflow: 'auto', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '24px' },
+  durumKutu: { padding: '40px', textAlign: 'center', color: '#6b7280', fontSize: '14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' },
+  demoBanner: { padding: '10px 14px', fontSize: '13px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' },
   pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
   pageTitle: { fontSize: '26px', fontWeight: '700', color: '#111827', marginBottom: '4px' },
   pageSubtitle: { fontSize: '14px', color: '#6b7280' },
