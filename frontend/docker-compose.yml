@@ -1,0 +1,11 @@
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        # Backend base URL — derleme anında gömülür. Prod'da kendi adresinle değiştir.
+        VITE_API_URL: http://localhost:8000
+    ports:
+      # Tarayıcı origin'i http://localhost:3000 olur; backend CORS bu origin'e izin verir.
+      - "3000:80"
+    restart: unless-stopped
