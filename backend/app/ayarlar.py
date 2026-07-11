@@ -22,3 +22,12 @@ class Ayarlar(BaseSettings):
 
     redis_arac_ttl_sn: int = 30
     redis_hat_ttl_sn: int = 60
+
+    # Panel farklı origin'den (farklı port) çağırırsa tarayıcı CORS ister.
+    # Virgülle ayrılmış origin listesi; prod'da tek origin (reverse proxy)
+    # kullanılıyorsa boş bırakılabilir.
+    cors_izinli_originler: str = "http://localhost:3000,http://localhost:5173"
+
+    @property
+    def cors_originleri(self) -> list[str]:
+        return [o.strip() for o in self.cors_izinli_originler.split(",") if o.strip()]

@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.adapters.cikan.postgres.baglanti import (
@@ -41,10 +42,10 @@ def uygulama_olustur() -> FastAPI:
     kontroller enjekte eder (bkz. tests/unit/test_saglik.py).
     """
 
+    ayarlar = Ayarlar()
+
     @asynccontextmanager
     async def yasam_dongusu(uygulama: FastAPI) -> AsyncIterator[None]:
-        ayarlar = Ayarlar()
-
         # Çıkan adaptörler
         motor = motor_olustur(ayarlar.database_url)
         await tablolari_olustur(motor)
@@ -91,7 +92,24 @@ def uygulama_olustur() -> FastAPI:
         await redis.aclose()
         await motor.dispose()
 
+    # Panel farklı origin'den (port) çağırdığında tarayıcı CORS ister.
+    # İzinli origin'ler ayarlardan gelir; prod'da tek origin/proxy ise boş olabilir.
+    izinli_originler = ayarlar.cors_originleri
+    if "*" in izinli_originler:
+        # allow_credentials=True ile joker origin tarayıcılarca reddedilir;
+        # yanlış yapılandırma sessizce prod'a sızmasın diye açılışta patla.
+        raise ValueError(
+            "CORS_IZINLI_ORIGINLER '*' olamaz: kimlik bilgili isteklerde joker "
+            "origin tarayıcılar tarafından reddedilir. Açık origin'ler belirtin."
+        )
     uygulama = FastAPI(title="HAT 01 Backend", lifespan=yasam_dongusu)
+    uygulama.add_middleware(
+        CORSMiddleware,
+        allow_origins=izinli_originler,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     uygulama.include_router(saglik_router)
     uygulama.include_router(hatlar_router)
     uygulama.include_router(araclar_router)
