@@ -37,6 +37,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
+      # Panel farklı origin'den çağırıyorsa izin verilen origin'leri buraya yaz (virgülle).
+      # Varsayılan dev portları koda gömülü; prod'da mutlaka geçersiz kıl. "*" verilemez.
+      # CORS_IZINLI_ORIGINLER: "https://panel.ornek.com"
     ports:
       - "8000:8000"
     depends_on:
