@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HAT 01 — Proje Günlüğü</title>
+<title>YOTAY — Proje Günlüğü</title>
 <style>
   :root{
     --yan-bg:#12141c;
@@ -115,7 +115,7 @@
         <circle cx="16" cy="18" r="1" fill="#12141c"/>
       </svg>
       <div>
-        <b>HAT 01</b>
+        <b>YOTAY</b>
         <span>Otobüs Yoğunluk · Proje Günlüğü</span>
       </div>
     </div>
@@ -275,7 +275,7 @@ function sayfaGoster(id){
   document.querySelectorAll("#menu a").forEach(a=>a.classList.toggle("aktif", a.dataset.id===s.id));
   baslikEl.textContent=s.baslik;
   disariEl.href=s.dosya; disariEl.style.display="";
-  document.title="HAT 01 · "+s.baslik;
+  document.title="YOTAY · "+s.baslik;
 
   if(/\.md$/i.test(s.dosya)){
     icerik.innerHTML='<div class="yazi"><p style="color:#9ca3af">Yükleniyor…</p></div>';

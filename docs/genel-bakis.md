@@ -1,11 +1,11 @@
 # Genel Bakış
 
-**HAT 01 — Otobüs İçi Yoğunluk Tespiti**, toplu taşıma araçlarına ve duraklara yerleştirilen kameralardan gelen görüntülerin görüntü işleme ile analiz edilerek araç/hat/durak bazlı yoğunluk tespiti yapılmasını hedefleyen bir projedir. Amaç, mevcut statik toplu taşıma yapısını daha dinamik ve veriye dayalı bir sisteme dönüştürmek; analiz sonuçlarını yöneticilerin karar süreçlerinde kullanabileceği bir admin panel üzerinden sunmak.
+**YOTAY — Otobüs İçi Yoğunluk Tespiti**, toplu taşıma araçlarına ve duraklara yerleştirilen kameralardan gelen görüntülerin görüntü işleme ile analiz edilerek araç/hat/durak bazlı yoğunluk tespiti yapılmasını hedefleyen bir projedir. Amaç, mevcut statik toplu taşıma yapısını daha dinamik ve veriye dayalı bir sisteme dönüştürmek; analiz sonuçlarını yöneticilerin karar süreçlerinde kullanabileceği bir admin panel üzerinden sunmak.
 
 ## Sistemdeki bileşenler
 
 ```
-edge cihazlar ──MQTT──▶ [ HAT 01 Backend ] ──REST + WebSocket──▶ panel (frontend)
+edge cihazlar ──MQTT──▶ [ Backend ] ──REST + WebSocket──▶ panel (frontend)
 ```
 
 | Bileşen | Ne yapar | Kod |

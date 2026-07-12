@@ -1,6 +1,6 @@
 # Ekran Görüntüleri
 
-HAT 01 admin panelinin (frontend) mevcut sayfaları.
+YOTAY admin panelinin (frontend) mevcut sayfaları.
 
 ## Giriş
 
