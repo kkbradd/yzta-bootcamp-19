@@ -1,13 +1,26 @@
 import { useState } from 'react'
+import { apiPost } from '../api/client'
 const busBg = '/otobus.png'
 
 export default function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [hata, setHata] = useState('')
+  const [gonderiliyor, setGonderiliyor] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (onLogin) onLogin()
+    setHata('')
+    setGonderiliyor(true)
+    try {
+      const yanit = await apiPost('/api/oturum', { eposta: email, sifre: password })
+      localStorage.setItem('erisim_tokeni', yanit.erisim_tokeni)
+      if (onLogin) onLogin()
+    } catch {
+      setHata('E-posta veya şifre hatalı.')
+    } finally {
+      setGonderiliyor(false)
+    }
   }
 
   return (
@@ -97,8 +110,10 @@ export default function LoginPage({ onLogin }) {
                 </div>
               </div>
 
-              <button type="submit" style={styles.submitBtn}>
-                Giriş Yap
+              {hata && <p style={styles.hata}>{hata}</p>}
+
+              <button type="submit" style={styles.submitBtn} disabled={gonderiliyor}>
+                {gonderiliyor ? 'Giriş yapılıyor…' : 'Giriş Yap'}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                   <line x1="5" y1="12" x2="19" y2="12" />
                   <polyline points="12 5 19 12 12 19" />
@@ -111,6 +126,12 @@ export default function LoginPage({ onLogin }) {
             Sistem erişimi yalnızca kayıtlı belediye personeli ile sınırlıdır.
             Problem yaşıyorsanız <a href="#" style={styles.supportLink}>IT Destek</a> ile iletişime geçin.
           </p>
+
+          <div style={styles.demoKutusu}>
+            <span style={styles.demoBaslik}>Demo giriş bilgileri</span>
+            <span>E-posta: admin@demo.com</span>
+            <span>Şifre: admin123</span>
+          </div>
         </div>
       </div>
     </div>
@@ -311,6 +332,27 @@ const styles = {
     fontSize: '13px',
     color: '#6b7280',
     textDecoration: 'none',
+  },
+  hata: {
+    fontSize: '13px',
+    color: '#dc2626',
+    margin: 0,
+  },
+  demoKutusu: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    padding: '14px 16px',
+    background: '#f9fafb',
+    border: '1px dashed #d1d5db',
+    borderRadius: '10px',
+    fontSize: '13px',
+    color: '#6b7280',
+  },
+  demoBaslik: {
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: '2px',
   },
   submitBtn: {
     display: 'flex',

@@ -93,6 +93,14 @@ class CihazAtamasiTablosu(Taban):
     bitis: Mapped[datetime | None]  # NULL = güncel atama
 
 
+class KullaniciTablosu(Taban):
+    __tablename__ = "kullanicilar"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    eposta: Mapped[str] = mapped_column(unique=True)
+    sifre_hash: Mapped[str]
+
+
 class OlcumTablosu(Taban):
     __tablename__ = "olcumler"
     __table_args__ = (

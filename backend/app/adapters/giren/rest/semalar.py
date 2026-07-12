@@ -92,3 +92,16 @@ class CihazAtamasiOlustur(BaseModel):
 
 
 AtamaOlustur = Annotated[HatAtamasiOlustur | CihazAtamasiOlustur, Field(discriminator="tur")]
+
+
+# ---- Oturum (giriş) ----
+
+
+class OturumAcIstegi(BaseModel):
+    eposta: str
+    sifre: str
+
+
+class OturumYaniti(BaseModel):
+    erisim_tokeni: str
+    token_tipi: Literal["bearer"] = "bearer"

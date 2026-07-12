@@ -14,9 +14,10 @@ from app.adapters.cikan.postgres.tablolar import (
     AracTablosu,
     CihazAtamasiTablosu,
     HatAtamasiTablosu,
+    KullaniciTablosu,
     OlcumTablosu,
 )
-from app.domain.modeller import Arac, CihazAtamasi, HatAtamasi, Olcum
+from app.domain.modeller import Arac, CihazAtamasi, HatAtamasi, Kullanici, Olcum
 
 OturumFabrikasi = async_sessionmaker[AsyncSession]
 
@@ -102,3 +103,18 @@ class PostgresAtamaDeposu:
         if satir is None:
             return None
         return Arac(id=satir.id, plaka=satir.plaka, tip=satir.tip, kapasite=satir.kapasite)
+
+
+class PostgresKullaniciDeposu:
+    """KullaniciDeposuPort implementasyonu."""
+
+    def __init__(self, oturum_fabrikasi: OturumFabrikasi) -> None:
+        self._oturum_fabrikasi = oturum_fabrikasi
+
+    async def epostaya_gore_bul(self, eposta: str) -> Kullanici | None:
+        ifade = select(KullaniciTablosu).where(KullaniciTablosu.eposta == eposta)
+        async with self._oturum_fabrikasi() as oturum:
+            satir = await oturum.scalar(ifade)
+        if satir is None:
+            return None
+        return Kullanici(id=satir.id, eposta=satir.eposta, sifre_hash=satir.sifre_hash)

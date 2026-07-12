@@ -28,6 +28,10 @@ class Ayarlar(BaseSettings):
     # kullanılıyorsa boş bırakılabilir.
     cors_izinli_originler: str = "http://localhost:3000,http://localhost:5173"
 
+    # Varsayılan yalnız geliştirme içindir; prod'da .env ile geçersiz kılınmalı.
+    jwt_gizli_anahtar: str = "gelistirme-ortami-gizli-anahtari-degistir"
+    jwt_gecerlilik_sn: int = 3600 * 8
+
     @property
     def cors_originleri(self) -> list[str]:
         return [o.strip() for o in self.cors_izinli_originler.split(",") if o.strip()]

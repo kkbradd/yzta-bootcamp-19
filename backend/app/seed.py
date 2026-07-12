@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.adapters.cikan.guvenlik import sifre_hashle
 from app.adapters.cikan.postgres.baglanti import motor_olustur, tablolari_olustur
 from app.adapters.cikan.postgres.tablolar import (
     AracTablosu,
@@ -19,6 +20,7 @@ from app.adapters.cikan.postgres.tablolar import (
     DurakTablosu,
     HatAtamasiTablosu,
     HatTablosu,
+    KullaniciTablosu,
 )
 from app.ayarlar import Ayarlar
 from app.domain.modeller import CIHAZ_TIPI_ARAC, CIHAZ_TIPI_DURAK
@@ -39,6 +41,9 @@ ARACLAR = [
     ("34 HAT 005", "midibus", 30, "42"),
 ]
 YAZILIM_SURUMU = "1.0.0"
+
+DEMO_KULLANICI_EPOSTA = "admin@demo.com"
+DEMO_KULLANICI_SIFRE = "admin123"
 
 
 async def tohumla(oturum: AsyncSession) -> bool:
@@ -85,6 +90,25 @@ async def tohumla(oturum: AsyncSession) -> bool:
     return True
 
 
+async def kullanici_tohumla(oturum: AsyncSession) -> bool:
+    """Demo kullanıcıyı yükler; zaten varsa dokunmadan False döner."""
+    mevcut = await oturum.scalar(
+        select(func.count())
+        .select_from(KullaniciTablosu)
+        .where(KullaniciTablosu.eposta == DEMO_KULLANICI_EPOSTA)
+    )
+    if mevcut:
+        return False
+    oturum.add(
+        KullaniciTablosu(
+            eposta=DEMO_KULLANICI_EPOSTA,
+            sifre_hash=sifre_hashle(DEMO_KULLANICI_SIFRE),
+        )
+    )
+    await oturum.commit()
+    return True
+
+
 async def _calistir() -> None:
     ayarlar = Ayarlar()
     motor = motor_olustur(ayarlar.database_url)
@@ -93,6 +117,11 @@ async def _calistir() -> None:
     async with oturum_fabrikasi() as oturum:
         yuklendi = await tohumla(oturum)
     logger.info("tohum %s", "yüklendi" if yuklendi else "zaten yüklü, değişiklik yok")
+    async with oturum_fabrikasi() as oturum:
+        kullanici_yuklendi = await kullanici_tohumla(oturum)
+    logger.info(
+        "kullanıcı tohumu %s", "yüklendi" if kullanici_yuklendi else "zaten yüklü, değişiklik yok"
+    )
     await motor.dispose()
 
 
