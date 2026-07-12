@@ -92,6 +92,13 @@
     .yazi{padding:28px 20px 60px}
   }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: false, theme: "neutral" });
+  window.__mermaid = mermaid;
+</script>
 </head>
 <body>
 <div class="duzen">
@@ -141,9 +148,13 @@ const SAYFALAR = [
   { baslik: "Genel Bakış",  dosya: "genel-bakis.md" },
   { baslik: "Görsel Özet",  dosya: "otobus_yogunluk_gorsel_ozet_1.html" },
 
-  // { grup: "Tasarım" },
-  // { baslik: "Mimari",     dosya: "mimari.md" },
-  // { baslik: "Veri Seti",  dosya: "veri-seti.md" },
+  { grup: "Mimari" },
+  { baslik: "Sistem Mimarisi", dosya: "mimari.md" },
+  { baslik: "REST & WebSocket", dosya: "api.md" },
+  { baslik: "MQTT Sözleşmesi", dosya: "mqtt.md" },
+
+  { grup: "Ürün" },
+  { baslik: "Ekran Görüntüleri", dosya: "ekranlar.md" },
 ];
 
 /* ---------------------------------------------------------------------
@@ -205,7 +216,7 @@ function mdToHtml(ham){
     if(/^```/.test(line)){
       const dil=line.slice(3).trim(); i++; const buf=[];
       while(i<L.length && !/^```/.test(L[i])){buf.push(L[i]); i++;} i++;
-      html+="<pre><code"+(dil?' class="dil-'+dil+'"':"")+">"+buf.join("\n")+"</code></pre>"; continue;
+      html+="<pre><code"+(dil?' class="language-'+dil+'"':"")+">"+buf.join("\n")+"</code></pre>"; continue;
     }
     const h=line.match(/^(#{1,6})\s+(.*)$/);
     if(h){const lv=h[1].length; html+="<h"+lv+">"+satirIci(h[2].trim())+"</h"+lv+">"; i++; continue;}
@@ -236,6 +247,23 @@ function mdToHtml(ham){
   return html;
 }
 
+/* ---- Kod vurgulama + mermaid ---- */
+function vurgula(){
+  icerik.querySelectorAll("pre code.language-mermaid").forEach(kod=>{
+    const div=document.createElement("div");
+    div.className="mermaid"; div.textContent=kod.textContent;
+    kod.closest("pre").replaceWith(div);
+  });
+  if(window.__mermaid){
+    const bloklar=icerik.querySelectorAll("div.mermaid");
+    if(bloklar.length) window.__mermaid.run({nodes:bloklar});
+  }
+  if(window.hljs){
+    icerik.querySelectorAll("pre code.language-jsonc").forEach(kod=>kod.classList.replace("language-jsonc","language-json"));
+    icerik.querySelectorAll("pre code:not(.language-mermaid)").forEach(kod=>window.hljs.highlightElement(kod));
+  }
+}
+
 /* ---- Yönlendirme / gösterim ---- */
 const icerik=document.getElementById("icerik");
 const baslikEl=document.getElementById("baslik");
@@ -252,7 +280,7 @@ function sayfaGoster(id){
   if(/\.md$/i.test(s.dosya)){
     icerik.innerHTML='<div class="yazi"><p style="color:#9ca3af">Yükleniyor…</p></div>';
     fetch(s.dosya).then(r=>{if(!r.ok) throw new Error(r.status); return r.text();})
-      .then(t=>{icerik.innerHTML='<article class="yazi">'+mdToHtml(t)+'</article>'; icerik.scrollTop=0;})
+      .then(t=>{icerik.innerHTML='<article class="yazi">'+mdToHtml(t)+'</article>'; icerik.scrollTop=0; vurgula();})
       .catch(()=>{icerik.innerHTML='<div class="mesaj"><b>Markdown yüklenemedi.</b><br><br>'+
         'Dosya <code>file://</code> ile açıldığında tarayıcı <code>.md</code> okumasını engeller. '+
         'Yerelde önizlemek için proje kökünde bir sunucu çalıştır:<br><br>'+
