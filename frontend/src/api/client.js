@@ -11,3 +11,16 @@ export async function apiGet(yol) {
   }
   return yanit.json()
 }
+
+// Basit POST sarmalayıcı: JSON gönderir, JSON döndürür, HTTP hatasında fırlatır.
+export async function apiPost(yol, govde) {
+  const yanit = await fetch(`${API_TABANI}${yol}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(govde),
+  })
+  if (!yanit.ok) {
+    throw new Error(`İstek başarısız: ${yanit.status}`)
+  }
+  return yanit.json()
+}

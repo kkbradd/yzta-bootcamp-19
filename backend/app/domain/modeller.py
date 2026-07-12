@@ -62,6 +62,13 @@ class CihazAtamasi:
 
 
 @dataclass(frozen=True, slots=True)
+class Kullanici:
+    id: int
+    eposta: str
+    sifre_hash: str
+
+
+@dataclass(frozen=True, slots=True)
 class Olcum:
     """Tek bir yoğunluk ölçümü; arac/hat alanları ingest anında denormalize edilir."""
 

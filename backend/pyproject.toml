@@ -12,6 +12,8 @@ dependencies = [
     "redis>=5.0",
     "pydantic>=2.7",
     "pydantic-settings>=2.2",
+    "bcrypt>=4.1",
+    "pyjwt>=2.8",
 ]
 
 [dependency-groups]
