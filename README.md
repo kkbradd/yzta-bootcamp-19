@@ -76,6 +76,26 @@ Elde edilen görüntü analiz sonuçlarının, yöneticilerin kolayca takip edeb
 
 ---
 
+<details>
+  <summary><h2>YOTAY Asistan (Chatbot)</h2></summary>
+
+Yoğunluk verileriyle konuşan, tamamen lokal chatbot servisi: sorular OpenJarvis
+orkestrasyonuyla lokal LLM'e (Ollama, qwen3.5:0.8b) gider; asistan gerçek hat/araç
+verisini backend API'sinden tool çağrılarıyla çekip Türkçe cevaplar. Hiçbir veri
+makineden çıkmaz. Tek komutla çalıştırma:
+
+```bash
+docker compose --profile demo up --build
+curl -X POST localhost:8100/chat -H "Content-Type: application/json" \
+     -d '{"mesaj": "Şu an hatlarda yoğunluk nasıl?"}'
+```
+
+Ayrıntılar: [asistan/README.md](asistan/README.md)
+
+</details>
+
+---
+
 ![Sprint 1](assets/sprint1/Spr%C4%B1nt%201.png)
 
 <details>
