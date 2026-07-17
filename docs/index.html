@@ -4,11 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>YOTAY — Proje Günlüğü</title>
+<meta name="description" content="YOTAY — Otobüs İçi Yoğunluk Tespiti. Toplu taşıma yoğunluğunu izleyen sistemin proje günlüğü: mimari, API, MQTT sözleşmesi, asistan (chatbot) ve ekran görüntüleri.">
+<meta property="og:title" content="YOTAY — Proje Günlüğü">
+<meta property="og:description" content="Toplu taşıma yoğunluk izleme sistemi: mimari, API, asistan (chatbot) ve ekranlar.">
+<meta property="og:type" content="website">
+<!-- Favicon: markadaki otobüs logosunun data: URI hâli (dış dosya yok). -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3' y='4' width='18' height='12' rx='2.5' fill='%236366f1'/%3E%3Crect x='5.5' y='6.5' width='5' height='4' rx='1' fill='%23c7d2fe'/%3E%3Crect x='13.5' y='6.5' width='5' height='4' rx='1' fill='%23c7d2fe'/%3E%3Ccircle cx='8' cy='18' r='2' fill='%23fff'/%3E%3Ccircle cx='16' cy='18' r='2' fill='%23fff'/%3E%3C/svg%3E">
 <style>
   :root{
     --yan-bg:#12141c;
     --yan-metin:#c3cad6;
-    --yan-metin-soluk:#7c869a;
+    --yan-metin-soluk:#8b95a8;  /* WCAG AA: 6.09:1 (koyu panelde küçük etiketler) */
     --yan-aktif-bg:#1c2130;
     --vurgu:#6366f1;
     --icerik-bg:#ffffff;
@@ -130,7 +136,8 @@
       <button class="menu-btn" id="menu-btn" aria-label="Menü"><span></span><span></span><span></span></button>
       <h1 id="baslik">—</h1>
       <div class="ara"></div>
-      <a class="disari" id="disari" href="#" target="_blank" rel="noopener" style="display:none">Yeni sekmede aç ↗</a>
+      <a class="disari" href="https://github.com/kkbradd/yzta-bootcamp-19" target="_blank" rel="noopener">GitHub'da Aç ↗</a>
+      <a class="disari" id="disari" href="#" target="_blank" rel="noopener" style="display:none">Ham dosya ↗</a>
     </header>
     <section class="icerik" id="icerik"></section>
   </main>
@@ -152,6 +159,9 @@ const SAYFALAR = [
   { baslik: "Sistem Mimarisi", dosya: "mimari.md" },
   { baslik: "REST & WebSocket", dosya: "api.md" },
   { baslik: "MQTT Sözleşmesi", dosya: "mqtt.md" },
+
+  { grup: "Asistan" },
+  { baslik: "Asistan (Chatbot)", dosya: "asistan.md" },
 
   { grup: "Ürün" },
   { baslik: "Ekran Görüntüleri", dosya: "ekranlar.md" },
