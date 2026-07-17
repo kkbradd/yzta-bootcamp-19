@@ -13,20 +13,23 @@ lokal çalışır, bulut API'si çağrılmaz.
 ## Mimari
 
 ```
-Kullanıcı → POST /chat → YotayAsistani (OpenJarvis OrchestratorAgent)
-                              │  tool çağrıları (function calling)
-                              ▼
+Panel (3000) → POST /chat → YotayAsistani (OpenJarvis OrchestratorAgent)
+  AsistanWidget   [CORS]           │  tool çağrıları (function calling)
+                                   ▼
                hat_yogunluklari / hat_anlik_durum / hat_trend
-                              │  GET /api/hatlar...
-                              ▼
+                                   │  GET /api/hatlar...
+                                   ▼
                       YOTAY backend (8000)          Ollama (qwen3.5:0.8b)
 ```
 
 - `app/ayarlar.py` — ortam değişkenlerinden okunan ayarlar ve sabitler
 - `app/araclar.py` — üç OpenJarvis tool'u; veriyi backend REST API'sinden okur
 - `app/cekirdek.py` — agent kurulumu (aşağıdaki reçeteyle) ve `YotayAsistani.sor()`
-- `app/servis.py` — FastAPI: `POST /chat`, `GET /saglik`
+- `app/servis.py` — FastAPI: `POST /chat`, `GET /saglik` + panel için CORS
 - `app/model_hazirla.py` — konteyner girişinde modeli Ollama'ya indirir (idempotent)
+
+Panel arayüzü `frontend/src/components/AsistanWidget.jsx`'te; ayrı port'ta olduğu için
+tarayıcı CORS ister (bkz. `ASISTAN_CORS_IZINLI_ORIGINLER`).
 
 ## Hızlı başlangıç
 
@@ -58,6 +61,7 @@ uv run uvicorn app.servis:uygulama --port 8100
 | `ASISTAN_MODEL` | `qwen3.5:0.8b` | Kullanılacak model (örn. `qwen3.5:9b` ile yükseltilebilir) |
 | `ASISTAN_MOTOR` | `ollama` | OpenJarvis çıkarım motoru (`llamacpp` vb. lokal motorlar; `cloud` yalnız Gemini için) |
 | `GEMINI_API_KEY` | _(boş)_ | Yalnız Gemini modunda gerekir; `GOOGLE_API_KEY` de kabul edilir |
+| `ASISTAN_CORS_IZINLI_ORIGINLER` | `http://localhost:3000,http://localhost:5173` | Panelin origin'i (virgülle ayrılır). `*` reddedilir. |
 
 `ASISTAN_MOTOR` ve `ASISTAN_MODEL` aynı kararı kodlar; tutarsız kombinasyonlar
 (örn. `cloud` + `gpt-4o`, ya da `gemini-3-flash` + `ollama`) açılışta reddedilir.

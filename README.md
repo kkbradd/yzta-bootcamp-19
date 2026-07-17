@@ -86,6 +86,9 @@ Varsayılan kurulumda hiçbir veri makineden çıkmaz. Tek komutla çalıştırm
 
 ```bash
 docker compose --profile demo up --build
+# Panel: http://localhost:3000 — sağ alttaki 💬 düğmesi sohbeti açar.
+
+# Ya da doğrudan API'den:
 curl -X POST localhost:8100/chat -H "Content-Type: application/json" \
      -d '{"mesaj": "Şu an hatlarda yoğunluk nasıl?"}'
 ```
