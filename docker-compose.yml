@@ -7,6 +7,8 @@
 # model, ollama_modelleri volume'unda kalır ve sonraki açılışlar beklemesizdir.
 # Dışarı yalnızca backend (8000) ve asistan (8100) açılır; postgres/redis/mosquitto
 # konteyner ağında kalır. Geliştirme için backend/docker-compose.yml aynen geçerlidir.
+#
+# Varsayılan tamamen lokaldir. Opsiyonel Gemini için asistan servisindeki nota bakın.
 
 services:
   mosquitto:
@@ -77,7 +79,15 @@ services:
     environment:
       YOTAY_API_ADRESI: http://backend:8000
       OLLAMA_ADRESI: http://ollama:11434
-      ASISTAN_MODEL: qwen3.5:0.8b
+      # Varsayılan: lokal qwen — veri makineden çıkmaz. Bulut Gemini'ye geçmek için
+      # kök .env'e yaz (bkz. asistan/README.md "Gemini ile çalıştırma"):
+      #   ASISTAN_MOTOR=cloud
+      #   ASISTAN_MODEL=gemini-3-flash
+      #   GEMINI_API_KEY=...
+      # DİKKAT: bu modda sorular ve yoğunluk verileri Google'a gider.
+      ASISTAN_MODEL: ${ASISTAN_MODEL:-qwen3.5:0.8b}
+      ASISTAN_MOTOR: ${ASISTAN_MOTOR:-ollama}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - "8100:8100"
     depends_on:

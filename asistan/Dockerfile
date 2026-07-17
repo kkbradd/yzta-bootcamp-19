@@ -11,11 +11,14 @@ WORKDIR /uygulama
 
 # Önce yalnız bağımlılıklar: kod değişikliği bu katmanı bozmaz,
 # --frozen kilit dosyasıyla birebir aynı sürümleri kurar.
+# --extra gemini: opsiyonel Gemini motoru imaja dahil edilir (saf Python, birkaç MB).
+# Kurulu olmasaydı OpenJarvis cloud motorunu sessizce yok sayardı (engine/__init__.py
+# ImportError'ı yutuyor) ve GEMINI_API_KEY verilse bile lokal modele düşerdi.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --extra gemini --no-install-project
 
 COPY app ./app
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --extra gemini
 
 ENV PATH="/uygulama/.venv/bin:$PATH"
 

@@ -1,10 +1,12 @@
 """Ollama'da modelin hazır olmasını sağlar — konteyner girişinde çalışır.
 
 Model zaten çekilmişse hiçbir şey yapmaz; yoksa Ollama'nın ``/api/pull``
-ucuyla indirir (ilk açılışta ~1 GB sürebilir, bkz. README).
+ucuyla indirir (ilk açılışta ~1 GB sürebilir, bkz. README). Gemini modunda
+lokal model gerekmediği için adım tamamen atlanır.
 """
 
 import logging
+from collections.abc import Callable
 
 import httpx
 
@@ -34,11 +36,18 @@ def model_hazirla(model: str, istemci: httpx.Client) -> None:
     yanit.raise_for_status()
 
 
+def hazirlik_yap(ayarlar: Ayarlar, istemci_kur: Callable[[], httpx.Client]) -> None:
+    if ayarlar.gemini_mi:
+        logger.info("Gemini modu: lokal model çekilmiyor (%s)", ayarlar.model)
+        return
+    with istemci_kur() as istemci:
+        model_hazirla(ayarlar.model, istemci=istemci)
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     ayarlar = Ayarlar.ortamdan()
-    with httpx.Client(base_url=ayarlar.ollama_adresi) as istemci:
-        model_hazirla(ayarlar.model, istemci=istemci)
+    hazirlik_yap(ayarlar, istemci_kur=lambda: httpx.Client(base_url=ayarlar.ollama_adresi))
 
 
 if __name__ == "__main__":

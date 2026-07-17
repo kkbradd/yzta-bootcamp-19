@@ -6,6 +6,7 @@ konuşmasına SYSTEM mesajı olarak konur; temperature=0.0 tool çağırmayı
 kararlı kılar (qwen3.5:0.8b ile 4/4 doğrulandı).
 """
 
+import os
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -50,10 +51,22 @@ def _sistem_baglami() -> AgentContext:
     return AgentContext(conversation=Conversation(messages=[sistem_mesaji]))
 
 
+def _gemini_ortamini_hazirla(ayarlar: Ayarlar) -> None:
+    """Anahtarı OpenJarvis'in okuduğu yere koyar.
+
+    ``CloudEngine._init_clients`` anahtarı yalnız ``os.environ``'dan okur ve
+    ``EngineConfig``'de karşılığı yoktur; config üzerinden geçirmenin yolu yok.
+    (pyproject'te sabitlenmiş OpenJarvis sürümüne karşı doğrulandı.)
+    """
+    if ayarlar.gemini_mi and ayarlar.gemini_anahtari:
+        os.environ["GEMINI_API_KEY"] = ayarlar.gemini_anahtari
+
+
 def _motor_kur(ayarlar: Ayarlar) -> Ureten:
     from openjarvis.core.config import load_config
     from openjarvis.engine import get_engine
 
+    _gemini_ortamini_hazirla(ayarlar)
     config = load_config()
     # Gizlilik şartı: OpenJarvis'in anonim kullanım analitiği (PostHog) bizim kod
     # yolumuzda zaten başlatılmıyor; ileride değişmesin diye açıkça kapatıyoruz.

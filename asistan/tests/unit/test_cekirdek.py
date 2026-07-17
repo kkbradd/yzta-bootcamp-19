@@ -5,19 +5,25 @@ Reçetenin kalbi: sistem promptu konuşmanın İLK mesajı olarak SYSTEM rolüyl
 ve motora temperature=0.0 iletilmeli.
 """
 
+import dataclasses
+import os
 from typing import Any
 
 from openjarvis.core.types import Role, ToolResult
 from openjarvis.tools._stubs import BaseTool, ToolSpec
 
 from app.ayarlar import Ayarlar
-from app.cekirdek import SISTEM_PROMPTU, YotayAsistani
+from app.cekirdek import SISTEM_PROMPTU, YotayAsistani, _gemini_ortamini_hazirla
 
 AYARLAR = Ayarlar(
     yotay_api_adresi="http://test",
     ollama_adresi="http://test:11434",
     model="test-model",
     motor="ollama",
+)
+
+GEMINI_AYARLARI = dataclasses.replace(
+    AYARLAR, model="gemini-3-flash", motor="cloud", gemini_anahtari="gizli-anahtar"
 )
 
 BOS_KULLANIM = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
@@ -102,3 +108,31 @@ def test_arac_tanimlari_motora_gonderilir():
 
     gonderilen = motor.cagrilar[0]["tools"]
     assert gonderilen[0]["function"]["name"] == "sahte_arac"
+
+
+# ---- Gemini ortamı ----
+# CloudEngine anahtarı yalnız os.environ'dan okur; config'de alanı yok (bkz. cekirdek.py).
+
+
+def _ortami_yalit(monkeypatch) -> None:
+    # setenv ile başlanır: monkeypatch yalnız kendi değişikliğini geri alır, testin
+    # os.environ'a doğrudan yazdığını değil. Önce sahiplenmezse anahtar sonraki
+    # testlere sızar (delenv tek başına yetmiyor — doğrulandı).
+    monkeypatch.setenv("GEMINI_API_KEY", "yalitim-nobeti")
+    monkeypatch.delenv("GEMINI_API_KEY")
+
+
+def test_gemini_anahtari_ortama_yazilir(monkeypatch):
+    _ortami_yalit(monkeypatch)
+
+    _gemini_ortamini_hazirla(GEMINI_AYARLARI)
+
+    assert os.environ["GEMINI_API_KEY"] == "gizli-anahtar"
+
+
+def test_lokal_motorda_ortama_dokunulmaz(monkeypatch):
+    _ortami_yalit(monkeypatch)
+
+    _gemini_ortamini_hazirla(AYARLAR)
+
+    assert "GEMINI_API_KEY" not in os.environ
