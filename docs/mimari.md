@@ -1,5 +1,8 @@
 # Sistem Mimarisi
 
+Bu sayfa **backend'in** iç mimarisini anlatır. Asistan (chatbot) ayrı bir servistir,
+backend'i dışarıdan REST ile çağırır ve bu hexagon'un parçası değildir — bkz. [Asistan](asistan.md).
+
 Backend, Heksagonal (Ports & Adapters) mimariyle yazıldı. Amaç: iş kuralları (domain + use-case) altyapıdan (PostgreSQL, Redis, MQTT, WebSocket) tamamen habersiz kalsın; altyapıyı değiştirmek iş kurallarına dokunmasın.
 
 ## Katmanlar ve sorumlulukları

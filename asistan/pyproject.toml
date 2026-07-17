@@ -1,0 +1,45 @@
+[project]
+name = "yotay-asistan"
+version = "0.1.0"
+description = "YOTAY yoğunluk verileriyle konuşan lokal asistan servisi (OpenJarvis + Ollama)"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "openjarvis @ git+https://github.com/open-jarvis/OpenJarvis.git@8b59eb87e0b6006d898947647b042bba28e25ed4",
+    "fastapi>=0.110",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Opsiyonel Gemini motoru; varsayılan lokal kurulum bu paketi çekmez.
+# OpenJarvis'in "inference-google" extra'sıyla aynı bağımlılık.
+gemini = ["google-genai>=1.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+# OpenJarvis PyPI'da yok; doğrulanmış commit'e git URL'siyle sabitleniyor.
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["entegrasyon: gerçek backend + Ollama gerektirir; varsayılan koşuda atlanır"]
+addopts = "-m 'not entegrasyon'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "TID"]
