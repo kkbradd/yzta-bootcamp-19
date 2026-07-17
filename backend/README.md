@@ -125,6 +125,22 @@ open http://localhost:8000/docs
 
 `simulator.py` argümanları (varsayılanlar): `--cihaz 3`, `--periyot 5.0` (sn), `--tunel 0.0` (sn), `--broker localhost`, `--port 1883`. Cihaz id'leri `edge_0001..edge_000N` üretir ve seed'deki `edge_0001..edge_0006` ile eşleşir. Seed + simulator birlikte çalışınca panelde canlı doluluk görünür.
 
+### YOTAY Asistan (chatbot)
+
+Bu backend'in verilerini kullanan, tamamen lokal çalışan bir chatbot servisi
+`../asistan/` altında ayrı bir servis olarak bulunur (OpenJarvis + Ollama,
+bulut LLM yok). Backend'i buradaki adımlarla değil de tüm sistemi (backend +
+asistan + Ollama) tek komutla denemek istiyorsan depo kökündeki
+`docker-compose.yml`'u kullan:
+
+```bash
+# depo kökünden
+docker compose --profile demo up --build
+```
+
+Ayrıntılar ve küçük modelle güvenilir tool çağırma reçetesi için
+[asistan/README.md](../asistan/README.md).
+
 ---
 
 ## REST + WebSocket sözleşmesi
