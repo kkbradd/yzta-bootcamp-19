@@ -11,6 +11,8 @@ VARSAYILAN_TREND_SAATI = 3
 
 GEMINI_ANAHTAR_DEGISKENLERI = ("GEMINI_API_KEY", "GOOGLE_API_KEY")
 BULUT_MOTORU = "cloud"
+# Panel farklı port'tan çağırdığı için tarayıcı CORS ister (backend ile aynı kalıp).
+VARSAYILAN_CORS_ORIGINLERI = "http://localhost:3000,http://localhost:5173"
 
 
 class AyarHatasi(ValueError):
@@ -32,6 +34,11 @@ class Ayarlar:
     model: str
     motor: str
     gemini_anahtari: str = ""
+    cors_izinli_originler: str = VARSAYILAN_CORS_ORIGINLERI
+
+    @property
+    def cors_originleri(self) -> list[str]:
+        return [o.strip() for o in self.cors_izinli_originler.split(",") if o.strip()]
 
     @property
     def gemini_mi(self) -> bool:
@@ -50,11 +57,27 @@ class Ayarlar:
             model=os.getenv("ASISTAN_MODEL", "qwen3.5:0.8b"),
             motor=os.getenv("ASISTAN_MOTOR", "ollama"),
             gemini_anahtari=_gemini_anahtarini_oku(),
+            cors_izinli_originler=os.getenv(
+                "ASISTAN_CORS_IZINLI_ORIGINLER", VARSAYILAN_CORS_ORIGINLERI
+            ),
         )
         ayarlar._dogrula()
         return ayarlar
 
     def _dogrula(self) -> None:
+        self._motoru_dogrula()
+        self._corsu_dogrula()
+
+    def _corsu_dogrula(self) -> None:
+        # Joker origin, kimlik bilgili isteklerde tarayıcılarca reddedilir; yanlış
+        # yapılandırma sessizce prod'a sızmasın diye açılışta patlat (backend ile aynı).
+        if "*" in self.cors_originleri:
+            raise AyarHatasi(
+                "ASISTAN_CORS_IZINLI_ORIGINLER '*' olamaz: joker origin tarayıcılar "
+                "tarafından reddedilir. Açık origin'ler belirtin."
+            )
+
+    def _motoru_dogrula(self) -> None:
         # OpenJarvis tutarsızlığı sessizce yutar: kimlik bilgisi/motor uyuşmazsa
         # CloudEngine.health() False döner, get_engine lokale düşer ve kullanıcı
         # Gemini beklerken qwen'den (ya da hiç çekilmemiş modelden) cevap alır.
