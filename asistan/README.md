@@ -1,9 +1,14 @@
 # YOTAY Asistan
 
-Yoğunluk verileriyle konuşan, **tamamen lokal** chatbot servisi. Panel kullanıcısı
-"Şu an en yoğun hat hangisi?" diye sorar; asistan gerçek Redis/PostgreSQL verisini
-backend REST API'sinden çekip Türkçe cevaplar. Hiçbir veri makineden çıkmaz:
-LLM (qwen3.5:0.8b) Ollama'da lokal çalışır, bulut API'si yoktur.
+Yoğunluk verileriyle konuşan, **varsayılan olarak tamamen lokal** chatbot servisi.
+Panel kullanıcısı "Şu an en yoğun hat hangisi?" diye sorar; asistan gerçek
+Redis/PostgreSQL verisini backend REST API'sinden çekip Türkçe cevaplar.
+Varsayılan kurulumda hiçbir veri makineden çıkmaz: LLM (qwen3.5:0.8b) Ollama'da
+lokal çalışır, bulut API'si çağrılmaz.
+
+> **Tek istisna:** açıkça Gemini'ye geçerseniz (`ASISTAN_MOTOR=cloud` +
+> `GEMINI_API_KEY`) sorular ve yoğunluk verileri Google'a gider. Opsiyoneldir,
+> varsayılan değildir — bkz. [Gemini ile çalıştırma](#gemini-ile-çalıştırma-opsiyonel).
 
 ## Mimari
 
@@ -51,7 +56,43 @@ uv run uvicorn app.servis:uygulama --port 8100
 | `YOTAY_API_ADRESI` | `http://localhost:8000` | Backend REST API adresi |
 | `OLLAMA_ADRESI` | `http://localhost:11434` | Ollama sunucusu |
 | `ASISTAN_MODEL` | `qwen3.5:0.8b` | Kullanılacak model (örn. `qwen3.5:9b` ile yükseltilebilir) |
-| `ASISTAN_MOTOR` | `ollama` | OpenJarvis çıkarım motoru anahtarı |
+| `ASISTAN_MOTOR` | `ollama` | OpenJarvis çıkarım motoru anahtarı (`cloud` = bulut) |
+| `GEMINI_API_KEY` | _(boş)_ | Yalnız Gemini modunda gerekir; `GOOGLE_API_KEY` de kabul edilir |
+
+## Gemini ile çalıştırma (opsiyonel)
+
+qwen3.5:0.8b'nin cevap kalitesi yetmiyorsa aynı tool'larla Gemini'ye geçebilirsiniz.
+
+> ⚠️ **Gizlilik:** Bu modda sorular **ve tool sonuçları — yani gerçek yoğunluk
+> verileriniz —** Google'a gider. Projenin "veri makineden çıkmaz" garantisi yalnız
+> varsayılan lokal modda geçerlidir. Ayrıca Gemini ücretlidir (kullandıkça öde).
+
+```bash
+# depo kökünde .env (git'e girmez, kök .gitignore'da)
+ASISTAN_MOTOR=cloud
+ASISTAN_MODEL=gemini-3-flash
+GEMINI_API_KEY=...
+```
+
+```bash
+docker compose --profile demo up --build   # .env otomatik okunur
+```
+
+Yerel geliştirmede: `uv sync --extra gemini` (Docker imajında zaten kurulu).
+
+Desteklenen modeller (OpenJarvis `cloud` motoru): `gemini-3-flash`, `gemini-3-pro`,
+`gemini-2.5-flash`, `gemini-2.5-pro`. Sağlayıcı **model adından** seçilir — adında
+"gemini" geçmesi yeterlidir.
+
+**Reçete neden değişmiyor?** OpenJarvis'in Gemini yolu (`engine/cloud.py`
+`_generate_google`) mesajlardaki SYSTEM rolünü alıp `system_instruction`'a koyar ve
+tool'ları `function_declarations`'a çevirir — yani aşağıdaki reçete ve `araclar.py`
+Gemini'de de aynen çalışır. Kısa prompt zorunluluğu 0.8b'ye özgüydü; Gemini'de o
+baskı yok ama prompt aynı kalabilir.
+
+**Anahtar unutulursa ne olur?** Servis açılışta net bir Türkçe hatayla durur. Bu
+kasıtlıdır: OpenJarvis anahtar yokken sessizce lokal modele düşer (`CloudEngine.health()`
+False → `get_engine` fallback) ve Gemini beklerken qwen'den cevap alırdınız.
 
 ## API
 
