@@ -27,6 +27,10 @@ SISTEM_PROMPTU = (
 )
 
 
+class MotorKurulamadi(RuntimeError):
+    """Çıkarım motoru ayağa kaldırılamadı — sebebi mesajda."""
+
+
 @dataclass(slots=True)
 class AsistanCevabi:
     cevap: str
@@ -57,6 +61,9 @@ def _gemini_ortamini_hazirla(ayarlar: Ayarlar) -> None:
     ``CloudEngine._init_clients`` anahtarı yalnız ``os.environ``'dan okur ve
     ``EngineConfig``'de karşılığı yoktur; config üzerinden geçirmenin yolu yok.
     (pyproject'te sabitlenmiş OpenJarvis sürümüne karşı doğrulandı.)
+
+    Anahtar ``GOOGLE_API_KEY``'den gelmiş olsa bile ``GEMINI_API_KEY``'e yazılır;
+    OpenJarvis ikisini de okuduğu için tek isimde toplamak yeterli.
     """
     if ayarlar.gemini_mi and ayarlar.gemini_anahtari:
         os.environ["GEMINI_API_KEY"] = ayarlar.gemini_anahtari
@@ -73,7 +80,15 @@ def _motor_kur(ayarlar: Ayarlar) -> Ureten:
     config.analytics.enabled = False
     config.engine.ollama.host = ayarlar.ollama_adresi
     config.engine.default = ayarlar.motor
-    _, motor = get_engine(config, engine_key=ayarlar.motor)
+    sonuc = get_engine(config, engine_key=ayarlar.motor)
+    if sonuc is None:
+        # get_engine sağlıklı motor bulamazsa None döner; açmaya kalkarsak sebebi
+        # söylemeyen bir TypeError alırdık.
+        raise MotorKurulamadi(
+            f"'{ayarlar.motor}' motoru kurulamadı (model: {ayarlar.model}). "
+            "Ollama ayakta mı ve OLLAMA_ADRESI doğru mu kontrol edin."
+        )
+    _, motor = sonuc
     return motor
 
 

@@ -9,11 +9,18 @@ import dataclasses
 import os
 from typing import Any
 
+import pytest
 from openjarvis.core.types import Role, ToolResult
 from openjarvis.tools._stubs import BaseTool, ToolSpec
 
 from app.ayarlar import Ayarlar
-from app.cekirdek import SISTEM_PROMPTU, YotayAsistani, _gemini_ortamini_hazirla
+from app.cekirdek import (
+    SISTEM_PROMPTU,
+    MotorKurulamadi,
+    YotayAsistani,
+    _gemini_ortamini_hazirla,
+    _motor_kur,
+)
 
 AYARLAR = Ayarlar(
     yotay_api_adresi="http://test",
@@ -115,9 +122,10 @@ def test_arac_tanimlari_motora_gonderilir():
 
 
 def _ortami_yalit(monkeypatch) -> None:
-    # setenv ile başlanır: monkeypatch yalnız kendi değişikliğini geri alır, testin
-    # os.environ'a doğrudan yazdığını değil. Önce sahiplenmezse anahtar sonraki
-    # testlere sızar (delenv tek başına yetmiyor — doğrulandı).
+    # setenv değişkeni monkeypatch'e sahiplendirir (önceki değeri geri alma kaydına
+    # yazar) — testin sonradan os.environ'a doğrudan yazdığı anahtar da böylece
+    # temizlenir. Tek başına delenv, olmayan değişken için hiçbir kayıt tutmaz ve
+    # anahtar sonraki testlere sızar. delenv ise testin gördüğü durumu "yok" yapar.
     monkeypatch.setenv("GEMINI_API_KEY", "yalitim-nobeti")
     monkeypatch.delenv("GEMINI_API_KEY")
 
@@ -136,3 +144,16 @@ def test_lokal_motorda_ortama_dokunulmaz(monkeypatch):
     _gemini_ortamini_hazirla(AYARLAR)
 
     assert "GEMINI_API_KEY" not in os.environ
+
+
+def test_motor_bulunamazsa_aciklayici_hata_verilir(monkeypatch):
+    # get_engine sağlıklı motor yoksa None döner; fonksiyon-içi import edildiği için
+    # kaynak modülde değiştiriliyor (app.cekirdek'te bağlı bir isim yok).
+    import openjarvis.engine
+
+    monkeypatch.setattr(openjarvis.engine, "get_engine", lambda *a, **k: None)
+
+    with pytest.raises(MotorKurulamadi) as hata:
+        _motor_kur(AYARLAR)
+
+    assert "ollama" in str(hata.value)

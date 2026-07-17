@@ -56,8 +56,12 @@ uv run uvicorn app.servis:uygulama --port 8100
 | `YOTAY_API_ADRESI` | `http://localhost:8000` | Backend REST API adresi |
 | `OLLAMA_ADRESI` | `http://localhost:11434` | Ollama sunucusu |
 | `ASISTAN_MODEL` | `qwen3.5:0.8b` | Kullanılacak model (örn. `qwen3.5:9b` ile yükseltilebilir) |
-| `ASISTAN_MOTOR` | `ollama` | OpenJarvis çıkarım motoru anahtarı (`cloud` = bulut) |
+| `ASISTAN_MOTOR` | `ollama` | OpenJarvis çıkarım motoru (`llamacpp` vb. lokal motorlar; `cloud` yalnız Gemini için) |
 | `GEMINI_API_KEY` | _(boş)_ | Yalnız Gemini modunda gerekir; `GOOGLE_API_KEY` de kabul edilir |
+
+`ASISTAN_MOTOR` ve `ASISTAN_MODEL` aynı kararı kodlar; tutarsız kombinasyonlar
+(örn. `cloud` + `gpt-4o`, ya da `gemini-3-flash` + `ollama`) açılışta reddedilir.
+Sebebi: OpenJarvis böyle bir tutarsızlıkta hata vermeyip sessizce lokal motora düşer.
 
 ## Gemini ile çalıştırma (opsiyonel)
 

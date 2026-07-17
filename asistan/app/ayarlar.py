@@ -10,6 +10,7 @@ SICAKLIK = 0.0
 VARSAYILAN_TREND_SAATI = 3
 
 GEMINI_ANAHTAR_DEGISKENLERI = ("GEMINI_API_KEY", "GOOGLE_API_KEY")
+BULUT_MOTORU = "cloud"
 
 
 class AyarHatasi(ValueError):
@@ -34,8 +35,12 @@ class Ayarlar:
 
     @property
     def gemini_mi(self) -> bool:
-        """OpenJarvis sağlayıcıyı model adından seçer (bkz. cloud.py `_is_google_model`)."""
+        """OpenJarvis sağlayıcıyı model adından seçer (bkz. `_is_google_model`)."""
         return "gemini" in self.model.lower()
+
+    @property
+    def bulut_mu(self) -> bool:
+        return self.motor == BULUT_MOTORU
 
     @classmethod
     def ortamdan(cls) -> "Ayarlar":
@@ -50,8 +55,20 @@ class Ayarlar:
         return ayarlar
 
     def _dogrula(self) -> None:
-        # Anahtarsız Gemini'de OpenJarvis sessizce Ollama'ya düşer (cloud.py `health()`
-        # False → get_engine fallback); kullanıcı Gemini beklerken qwen'den cevap alır.
+        # OpenJarvis tutarsızlığı sessizce yutar: kimlik bilgisi/motor uyuşmazsa
+        # CloudEngine.health() False döner, get_engine lokale düşer ve kullanıcı
+        # Gemini beklerken qwen'den (ya da hiç çekilmemiş modelden) cevap alır.
+        # Motor ve model tek bir kararı kodladığı için ikisi de tutarlı olmalı.
+        if self.bulut_mu and not self.gemini_mi:
+            raise AyarHatasi(
+                f"ASISTAN_MOTOR={BULUT_MOTORU} yalnız Gemini modelleriyle desteklenir; "
+                f"{self.model} verildi. Gemini için ASISTAN_MODEL=gemini-3-flash kullanın."
+            )
+        if self.gemini_mi and not self.bulut_mu:
+            raise AyarHatasi(
+                f"{self.model} bulut modeli, ASISTAN_MOTOR={self.motor} ile çalışmaz. "
+                f"ASISTAN_MOTOR={BULUT_MOTORU} verin."
+            )
         if self.gemini_mi and not self.gemini_anahtari:
             raise AyarHatasi(
                 f"{self.model} modeli için GEMINI_API_KEY (veya GOOGLE_API_KEY) gerekli. "

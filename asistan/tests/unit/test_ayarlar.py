@@ -125,9 +125,41 @@ def test_lokal_motor_anahtarsiz_calisir(monkeypatch):
 def test_gemini_mi_model_adina_bakar(monkeypatch):
     _ortami_temizle(monkeypatch)
     monkeypatch.setenv("ASISTAN_MOTOR", BULUT_MOTORU)
-    monkeypatch.setenv("ASISTAN_MODEL", "gpt-4o")
+    monkeypatch.setenv("ASISTAN_MODEL", "gemini-3-flash")
     monkeypatch.setenv("GEMINI_API_KEY", "gizli-anahtar")
 
     ayarlar = Ayarlar.ortamdan()
 
-    assert not ayarlar.gemini_mi
+    assert ayarlar.gemini_mi
+
+
+def test_bulut_motoru_desteklenmeyen_modelle_reddedilir(monkeypatch):
+    _ortami_temizle(monkeypatch)
+    monkeypatch.setenv("ASISTAN_MOTOR", BULUT_MOTORU)
+    monkeypatch.setenv("ASISTAN_MODEL", "gpt-4o")
+
+    with pytest.raises(AyarHatasi) as hata:
+        Ayarlar.ortamdan()
+
+    assert "gpt-4o" in str(hata.value)
+
+
+def test_gemini_modeli_lokal_motorla_reddedilir(monkeypatch):
+    _ortami_temizle(monkeypatch)
+    monkeypatch.setenv("ASISTAN_MODEL", GEMINI_MODELI)
+    monkeypatch.setenv("GEMINI_API_KEY", "gizli-anahtar")
+
+    with pytest.raises(AyarHatasi) as hata:
+        Ayarlar.ortamdan()
+
+    assert "ASISTAN_MOTOR" in str(hata.value)
+
+
+def test_lokal_motor_gemini_disi_modelle_calisir(monkeypatch):
+    _ortami_temizle(monkeypatch)
+    monkeypatch.setenv("ASISTAN_MOTOR", "llamacpp")
+    monkeypatch.setenv("ASISTAN_MODEL", "qwen3.5:9b")
+
+    ayarlar = Ayarlar.ortamdan()
+
+    assert ayarlar.motor == "llamacpp"
