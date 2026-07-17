@@ -101,6 +101,39 @@ class KullaniciTablosu(Taban):
     sifre_hash: Mapped[str]
 
 
+class OneriTablosu(Taban):
+    __tablename__ = "oneriler"
+    __table_args__ = (
+        Index("ix_oneriler_hat_olusturulma", "hat_id", text("olusturulma_zamani DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"))
+    gun_no: Mapped[int]
+    saat_baslangic: Mapped[int]
+    saat_bitis: Mapped[int]
+    ortalama_doluluk: Mapped[float]
+    karsilastirma_ortalama_doluluk: Mapped[float | None]
+    oneri_metni: Mapped[str]
+    gerekce: Mapped[str]
+    olusturulma_zamani: Mapped[datetime]
+
+
+class UyariTablosu(Taban):
+    __tablename__ = "uyarilar"
+    __table_args__ = (
+        Index("ix_uyarilar_hat_olusturulma", "hat_id", text("olusturulma_zamani DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"))
+    ortalama_doluluk: Mapped[float]
+    ortalama_kisi: Mapped[float]
+    uyari_metni: Mapped[str]
+    gerekce: Mapped[str]
+    olusturulma_zamani: Mapped[datetime]
+
+
 class OlcumTablosu(Taban):
     __tablename__ = "olcumler"
     __table_args__ = (

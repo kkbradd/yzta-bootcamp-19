@@ -6,7 +6,7 @@ zamansal join yok; gecikmeli ölçümler çekim damgalarıyla doğru kovaya dü�
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import Integer, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.cikan.postgres.tablolar import CihazTablosu, HatTablosu, OlcumTablosu
@@ -50,6 +50,70 @@ class PostgresSorgular:
             )
             .group_by(kova)
             .order_by(kova)
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.execute(ifade)).mappings().all()
+        return [dict(s) for s in satirlar]
+
+    async def hat_haftalik_oruntu(
+        self, baslangic: datetime, bitis: datetime, min_olcum_sayisi: int = 5
+    ) -> list[dict]:
+        """hat_id × gun_no (0=Pazar..6=Cumartesi) × saat_dilimi(2 saatlik kova) →
+        ortalama_doluluk, ortalama_kisi, olcum_sayisi. Az örneklemli kovalar elenir
+        (min_olcum_sayisi) — LLM'e istatistiksel gürültü gitmesin diye.
+        """
+        gun_no = func.extract("dow", OlcumTablosu.olcum_zamani).cast(Integer).label("gun_no")
+        saat_baslangic = (
+            (func.extract("hour", OlcumTablosu.olcum_zamani).cast(Integer) / 2 * 2)
+            .cast(Integer)
+            .label("saat_baslangic")
+        )
+        ifade = (
+            select(
+                OlcumTablosu.hat_id,
+                gun_no,
+                saat_baslangic,
+                func.avg(OlcumTablosu.doluluk_orani).label("ortalama_doluluk"),
+                func.avg(OlcumTablosu.kisi_sayisi).label("ortalama_kisi"),
+                func.count().label("olcum_sayisi"),
+            )
+            .where(
+                OlcumTablosu.hat_id.is_not(None),
+                OlcumTablosu.doluluk_orani.is_not(None),
+                OlcumTablosu.olcum_zamani >= baslangic,
+                OlcumTablosu.olcum_zamani <= bitis,
+            )
+            .group_by(OlcumTablosu.hat_id, gun_no, saat_baslangic)
+            .having(func.count() >= min_olcum_sayisi)
+            .order_by(OlcumTablosu.hat_id, gun_no, saat_baslangic)
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.execute(ifade)).mappings().all()
+        return [dict(s) for s in satirlar]
+
+    async def hat_anlik_ozet(
+        self, baslangic: datetime, bitis: datetime, min_olcum_sayisi: int = 3
+    ) -> list[dict]:
+        """hat_id → ortalama_doluluk, ortalama_kisi, olcum_sayisi (verilen pencerede, gün/saat
+        kovası yok). "Yoğun" filtrelemesi burada yapılmaz; use-case katmanında
+        seviye_belirle ile yapılır (bkz. app/application/uyari_uret.py).
+        """
+        ifade = (
+            select(
+                OlcumTablosu.hat_id,
+                func.avg(OlcumTablosu.doluluk_orani).label("ortalama_doluluk"),
+                func.avg(OlcumTablosu.kisi_sayisi).label("ortalama_kisi"),
+                func.count().label("olcum_sayisi"),
+            )
+            .where(
+                OlcumTablosu.hat_id.is_not(None),
+                OlcumTablosu.doluluk_orani.is_not(None),
+                OlcumTablosu.olcum_zamani >= baslangic,
+                OlcumTablosu.olcum_zamani <= bitis,
+            )
+            .group_by(OlcumTablosu.hat_id)
+            .having(func.count() >= min_olcum_sayisi)
+            .order_by(OlcumTablosu.hat_id)
         )
         async with self._oturum_fabrikasi() as oturum:
             satirlar = (await oturum.execute(ifade)).mappings().all()

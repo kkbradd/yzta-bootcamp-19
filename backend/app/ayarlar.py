@@ -32,6 +32,17 @@ class Ayarlar(BaseSettings):
     jwt_gizli_anahtar: str = "gelistirme-ortami-gizli-anahtari-degistir"
     jwt_gecerlilik_sn: int = 3600 * 8
 
+    # Öneri motoru: haftalık örüntü tespiti + LLM yorumlama (bkz. app/application/oneri_uret.py).
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.5-flash"
+    oneri_calisma_gunu: int = 0  # Pazartesi (datetime.weekday())
+    oneri_calisma_saati: int = 6
+    oneri_gun_pencere: int = 30
+
+    # Son Uyarılar akışı: son N saatlik ham veriye bakıp yoğun hatlar için anlık LLM uyarısı.
+    uyari_saat_pencere: int = 3
+    uyari_calisma_periyodu_sn: int = 10800  # 3 saat
+
     @property
     def cors_originleri(self) -> list[str]:
         return [o.strip() for o in self.cors_izinli_originler.split(",") if o.strip()]
