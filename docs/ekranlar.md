@@ -6,7 +6,8 @@ YOTAY admin panelinin (frontend) mevcut sayfaları.
 
 ![Giriş sayfası](assets/ekranlar/login-page.png)
 
-Split-screen giriş ekranı. Şu an gerçek kimlik doğrulama yapmaz, panele geçiş için placeholder.
+Split-screen giriş ekranı. JWT tabanlı gerçek kimlik doğrulama yapar: `POST /api/oturum`
+ile e-posta/şifre doğrulanır, dönen erişim token'ı tarayıcıda saklanır.
 
 ## Kontrol Paneli
 
@@ -32,6 +33,16 @@ Backend'e bağlı tek sayfa — `GET /api/hatlar`'dan gerçek veri çeker (hat n
 
 Durak listesi, arama/filtreleme ve erişilebilirlik/wifi/dijital ekran bilgisi.
 
+## Asistan (Sohbet)
+
+Oturum açıldıktan sonra her sayfanın sağ altında bir 💬 düğmesi bulunur; tıklanınca
+yüzen sohbet paneli açılır. Kullanıcı yoğunluk sorularını doğal dille sorar, asistan
+gerçek veriyle Türkçe cevaplar (bkz. [Asistan](asistan.md)).
+
+> **Not:** Ekran görüntüsü eklenecek. Sohbet paneli mevcut 5 ekranın hepsinde sağ
+> altta görünür; yukarıdaki görseller widget eklenmeden önce çekilmiştir.
+
 ---
 
-Kaynak kod: `frontend/src/pages/`. Sayfa bazında hangi verinin gerçek/mock olduğu için bkz. `frontend/README.md` → API entegrasyonu.
+Kaynak kod: `frontend/src/pages/` ve `frontend/src/components/AsistanWidget.jsx`.
+Sayfa bazında hangi verinin gerçek/mock olduğu için bkz. `frontend/README.md` → API entegrasyonu.
