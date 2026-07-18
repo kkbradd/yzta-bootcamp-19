@@ -32,7 +32,9 @@ class OneriMaddesi(BaseModel):
     hat_id: int
     gun_no: int
     saat_baslangic: int
-    saat_bitis: int
+    # Sorgu saatlik grupluyor, bitiş her zaman başlangıç+1. Modelden istemek
+    # kırılgandı: gemma-9b bu alanı atlayıp tüm yanıtı doğrulamadan düşürüyordu.
+    saat_bitis: int | None = None
     oneri_metni: str
     gerekce: str
 
@@ -65,12 +67,19 @@ def maddeleri_onerilere_cevir(maddeler: list[OneriMaddesi], ozet_veri: list[dict
     return oneriler
 
 
+def _saat_bitis(madde: OneriMaddesi, orijinal: dict) -> int:
+    """Bitiş saati: modelin verdiği değil, veriden türetilen (saatlik gruplama)."""
+    if madde.saat_bitis is not None:
+        return madde.saat_bitis
+    return orijinal.get("saat_bitis") or madde.saat_baslangic + 1
+
+
 def _madde_to_oneri(madde: OneriMaddesi, orijinal: dict, simdi: datetime) -> Oneri:
     return Oneri(
         hat_id=madde.hat_id,
         gun_no=madde.gun_no,
         saat_baslangic=madde.saat_baslangic,
-        saat_bitis=madde.saat_bitis,
+        saat_bitis=_saat_bitis(madde, orijinal),
         ortalama_doluluk=orijinal["ortalama_doluluk"],
         karsilastirma_ortalama_doluluk=orijinal.get("karsilastirma_ortalama_doluluk"),
         oneri_metni=madde.oneri_metni,

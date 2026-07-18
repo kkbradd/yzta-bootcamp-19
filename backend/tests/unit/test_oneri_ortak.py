@@ -28,6 +28,18 @@ def test_eslesen_madde_oneriye_cevrilir():
     assert sonuc[0].hat_id == 1
 
 
+def test_saat_bitis_yoksa_baslangictan_turetilir():
+    """Model saat_bitis'i atlarsa yanıt düşmemeli; sorgu saatlik gruplar (+1)."""
+    madde = OneriMaddesi(
+        hat_id=1, gun_no=1, saat_baslangic=8, oneri_metni="metin", gerekce="gerekce"
+    )
+
+    sonuc = maddeleri_onerilere_cevir([madde], OZET_ONERI)
+
+    assert len(sonuc) == 1
+    assert sonuc[0].saat_bitis == 9
+
+
 def test_gercek_doluluk_ozetten_alinir_llmden_degil():
     sonuc = maddeleri_onerilere_cevir([_oneri_maddesi()], OZET_ONERI)
 
