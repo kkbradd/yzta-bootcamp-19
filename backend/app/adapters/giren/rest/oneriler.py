@@ -17,7 +17,7 @@ OneriUretUseCase = Annotated[OneriUret, Depends(oneri_uret_getir)]
 
 
 @oneriler_router.get("")
-async def oneleri_listele(depo: OneriDeposu, limit: int = 50) -> list[OneriYaniti]:
+async def onerileri_listele(depo: OneriDeposu, limit: int = 50) -> list[OneriYaniti]:
     oneriler = await depo.son_oneriler(limit)
     return [OneriYaniti(**dataclasses.asdict(o)) for o in oneriler]
 

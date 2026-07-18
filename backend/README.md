@@ -141,6 +141,40 @@ docker compose --profile demo up --build
 Ayrıntılar ve küçük modelle güvenilir tool çağırma reçetesi için
 [asistan/README.md](../asistan/README.md).
 
+### AI öneri ve uyarı motoru
+
+Backend, topladığı yoğunluk verisinden iki tür AI çıktısı üretir:
+
+| Akış | Ne zaman | Ne yapar | Uç |
+|---|---|---|---|
+| **Öneri** | Haftada bir (varsayılan Pazartesi 06:00) | Son 30 günün hat × gün × saat örüntüsünü yorumlayıp operasyonel öneri üretir | `GET /api/oneriler`, `POST /api/oneriler/uret` |
+| **Uyarı** | Her 3 saatte bir | Son 3 saatte yoğunluk eşiğini aşan hatlar için anlık uyarı üretir | `GET /api/uyarilar`, `POST /api/uyarilar/uret` |
+
+**Motor seçimi `AI_MOTOR` ile yapılır ve zorunludur:**
+
+| `AI_MOTOR` | Nasıl çalışır | Gizlilik |
+|---|---|---|
+| `local` (varsayılan) | OpenJarvis `SimpleAgent` + Ollama, yerel model | **Veri makineden çıkmaz** |
+| `gemini` | Google Gemini API (`GEMINI_API_KEY` zorunlu) | **Veri Google'a gider** |
+
+> ⚠️ **Gizlilik:** `gemini` modunda hat bazlı yoğunluk özetleri (hat, gün/saat,
+> ortalama doluluk ve kişi sayısı) Google'a gönderilir. Projenin "veri makineden
+> çıkmaz" ilkesi yalnız varsayılan `local` modda geçerlidir. Bulut açık seçim ister.
+
+**Fallback asimetriktir (kasıtlı):** `gemini` seçiliyken bulut erişilemezse yerele
+düşülür (güvenli yön). Ama `local` seçiliyken Ollama erişilemezse **Gemini'ye
+DÜŞÜLMEZ** — boş sonuç dönülür. Böylece "lokal istiyorum" diyen kurulumun verisi
+hiçbir koşulda sessizce dışarı sızmaz.
+
+**Yerel model seçimi:** `YEREL_MODEL` ile verilir (varsayılan
+`alibayram/turkish-gemma-9b-v0.1`). **~9b sınıfı bir model önerilir**; 1b altı
+modeller yapılandırılmış JSON'u güvenilir üretmiyor (test edildi: qwen3.5:0.8b
+çıktıyı bozuyor, gemma-9b temiz üretiyor). Yerel modelin bozuk çıktısı servisi
+düşürmez; ayrıştırılamayan yanıt boş sonuca çevrilir ve loglanır.
+
+Anahtar verilmezse `local` modda backend sorunsuz açılır; `gemini` seçilip anahtar
+verilmezse açılışta net bir yapılandırma hatası alınır (sessiz çökme yok).
+
 ---
 
 ## REST + WebSocket sözleşmesi
