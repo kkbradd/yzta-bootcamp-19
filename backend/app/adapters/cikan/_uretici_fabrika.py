@@ -48,7 +48,15 @@ def _ollama_motoru(ayarlar: Any):
     config = load_config()
     config.analytics.enabled = False  # gizlilik: anonim telemetriyi kapat
     config.engine.ollama.host = ayarlar.ollama_adresi
-    _, motor = get_engine(config, engine_key="ollama")
+    sonuc = get_engine(config, engine_key="ollama")
+    if sonuc is None:
+        # Ollama erişilemezse get_engine None döner; unpack TypeError'ı yerine
+        # adresi de söyleyen açık hata ver (yanlış OLLAMA_ADRESI en sık sebep).
+        raise AyarHatasi(
+            f"Ollama motoru kurulamadı: '{ayarlar.ollama_adresi}' erişilemiyor. "
+            "OLLAMA_ADRESI doğru mu ve Ollama ayakta mı kontrol edin."
+        )
+    _, motor = sonuc
     return motor
 
 

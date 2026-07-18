@@ -18,7 +18,7 @@ from app.domain.modeller import Oneri
 
 _SEMA = (
     '{"oneriler": [{"hat_id": int, "gun_no": int, "saat_baslangic": int, '
-    '"saat_bitis": int, "oneri_metni": str, "gerekce": str}]}. '
+    '"oneri_metni": str, "gerekce": str}]}. '
     "Belirgin sapma yoksa oneriler boş liste olsun."
 )
 

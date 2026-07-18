@@ -12,7 +12,11 @@ from typing import Any
 import pytest
 
 from app.adapters.cikan._fallback import FallbackUretici
-from app.adapters.cikan._uretici_fabrika import AyarHatasi, oneri_ureticisi_sec
+from app.adapters.cikan._uretici_fabrika import (
+    AyarHatasi,
+    _ollama_motoru,
+    oneri_ureticisi_sec,
+)
 
 
 class SahteAyarlar:
@@ -33,6 +37,16 @@ class SahteUretici:
         if self._patlar:
             raise RuntimeError(f"{self.etiket} patladı")
         return [{"kaynak": self.etiket}]
+
+
+def test_ollama_erisilemezse_acik_ayar_hatasi(monkeypatch):
+    """get_engine None dönerse anlaşılmaz TypeError değil, adresi söyleyen hata."""
+    import openjarvis.engine
+
+    monkeypatch.setattr(openjarvis.engine, "get_engine", lambda *a, **k: None)
+
+    with pytest.raises(AyarHatasi, match="erişilemiyor"):
+        _ollama_motoru(SahteAyarlar(ai_motor="local"))
 
 
 async def test_local_secilince_yerel_birincil_gemini_yedek_yok(monkeypatch):
