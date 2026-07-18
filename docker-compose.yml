@@ -1,0 +1,135 @@
+# YOTAY tam-stack: tek komutla panel + backend + asistan + lokal LLM (Ollama).
+#
+#   docker compose up --build                     # çekirdek sistem
+#   docker compose --profile demo up --build      # + tohum verisiyle canlı simülatör
+#
+# Panel: http://localhost:3000 (sağ altta asistan sohbeti)
+#
+# İlk açılışta asistan konteyneri qwen3.5:0.8b modelini (~1 GB) Ollama'ya indirir;
+# model, ollama_modelleri volume'unda kalır ve sonraki açılışlar beklemesizdir.
+# Dışarı yalnızca panel (3000), backend (8000) ve asistan (8100) açılır;
+# postgres/redis/mosquitto konteyner ağında kalır.
+# Geliştirme için backend/ ve frontend/ altındaki compose dosyaları aynen geçerlidir.
+#
+# Varsayılan tamamen lokaldir. Opsiyonel Gemini için asistan servisindeki nota bakın.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./backend/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: hat01
+      POSTGRES_PASSWORD: hat01
+      POSTGRES_DB: hat01
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hat01 -d hat01"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+      REDIS_URL: redis://redis:6379/0
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+  # Tek seferlik tohum: 3 hat, 5 araç, cihazlar ve atamalar (idempotent).
+  seed:
+    build: ./backend
+    command: python -m app.seed
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_modelleri:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  asistan:
+    build: ./asistan
+    environment:
+      YOTAY_API_ADRESI: http://backend:8000
+      OLLAMA_ADRESI: http://ollama:11434
+      # Varsayılan: lokal qwen — veri makineden çıkmaz. Bulut Gemini'ye geçmek için
+      # kök .env'e yaz (bkz. asistan/README.md "Gemini ile çalıştırma"):
+      #   ASISTAN_MOTOR=cloud
+      #   ASISTAN_MODEL=gemini-3-flash
+      #   GEMINI_API_KEY=...
+      # DİKKAT: bu modda sorular ve yoğunluk verileri Google'a gider.
+      ASISTAN_MODEL: ${ASISTAN_MODEL:-qwen3.5:0.8b}
+      ASISTAN_MOTOR: ${ASISTAN_MOTOR:-ollama}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Panel 3000'de; tarayıcı farklı port'a istek atınca CORS ister.
+      ASISTAN_CORS_IZINLI_ORIGINLER: ${ASISTAN_CORS_IZINLI_ORIGINLER:-http://localhost:3000}
+    ports:
+      - "8100:8100"
+    depends_on:
+      backend:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+
+  # Panel. Adresler DERLEME anında gömülür (Vite), o yüzden tarayıcının göreceği
+  # adresler verilir — konteyner ağı adları (backend:8000) değil.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+        VITE_ASISTAN_URL: http://localhost:8100
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_started
+      asistan:
+        condition: service_started
+
+  # Canlı sahte veri akışı (demo profili): backend imajındaki uygulamayı değil,
+  # bağlanan simülatör betiğini çalıştırır; betik volume ile içeri verilir.
+  simulator:
+    build: ./backend
+    command: python simulator/simulator.py --broker mosquitto --cihaz 6 --periyot 2
+    profiles: ["demo"]
+    volumes:
+      - ./backend/simulator:/uygulama/simulator:ro
+    depends_on:
+      mosquitto:
+        condition: service_started
+      seed:
+        condition: service_completed_successfully
+
+volumes:
+  ollama_modelleri:
