@@ -18,12 +18,17 @@ Base: `0.0.0.0:8000`, tüm yollar `/api` prefix'li. Aşağıdaki özet yönlendi
 | POST | `/api/cihazlar` | `{id:str}` (201) | PostgreSQL — çakışma 409 |
 | POST | `/api/atamalar` | `{id:int}` (201) | PostgreSQL — geçersiz referans 409 |
 | POST | `/api/oturum` | `{eposta, sifre}` → `{erisim_tokeni}` (JWT); hatalı giriş 401. Panel token'ı localStorage'a yazar | PostgreSQL |
+| GET | `/api/oneriler` | `list[OneriYaniti]` — AI'ın ürettiği haftalık öneriler | PostgreSQL |
+| POST | `/api/oneriler/uret` | Öneri üretimini hemen tetikler (202); zamanlayıcıyı beklemez | PostgreSQL + LLM |
+| GET | `/api/uyarilar` | `list[UyariYaniti]` — AI'ın ürettiği anlık uyarılar | PostgreSQL |
+| POST | `/api/uyarilar/uret` | Uyarı üretimini hemen tetikler (202) | PostgreSQL + LLM |
 
 Notlar:
 - `trend` query paramları: `baslangic`, `bitis` (zorunlu datetime), `aralik` sadece `saat` veya `15dk` (varsayılan `saat`); başka değer 422.
 - `araclar/.../olcumler` query paramları: `baslangic`, `bitis` (zorunlu datetime).
 - `POST /api/atamalar` gövdesi discriminated union: `tur` alanı (`hat` | `cihaz`) zorunlu. Cihaz atamasında `arac_id` ile `durak_id`'den **tam biri** dolu olmalı, yoksa 422.
 - Cihaz id'leri string (istemci verir); hat/araç/durak/atama id'leri DB üretimi int.
+- `oneriler/uret` ve `uyarilar/uret` LLM çalıştırır; yerel modelle yanıt saniyeler sürebilir. Üretilecek bir şey yoksa (yeterli veri veya belirgin sapma yok) boş liste döner — hata değildir. Ayrıntı: [Öneri & Uyarı Motoru](ai-motoru.md).
 
 ## WebSocket
 
