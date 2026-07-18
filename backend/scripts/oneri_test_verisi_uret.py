@@ -89,7 +89,8 @@ async def _uret(gun: int, seyrek_ust: float, orta_ust: float) -> None:
         while an <= bitis:
             for arac_id, cihaz_id in cihaz_id_by_arac.items():
                 arac = araclar[arac_id]
-                if an.weekday() == _YOGUN_GUN and _YOGUN_SAAT_BASLANGIC <= an.hour < _YOGUN_SAAT_BITIS:
+                yogun_saatte = _YOGUN_SAAT_BASLANGIC <= an.hour < _YOGUN_SAAT_BITIS
+                if an.weekday() == _YOGUN_GUN and yogun_saatte:
                     doluluk_hedef = random.uniform(0.80, 0.95)
                 else:
                     doluluk_hedef = random.uniform(0.30, 0.50)

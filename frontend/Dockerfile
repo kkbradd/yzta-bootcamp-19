@@ -8,10 +8,12 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Backend adresi Vite tarafından DERLEME anında gömülür (import.meta.env.VITE_API_URL);
-# çalışma anında değiştirilemez. Farklı ortam = farklı build-arg.
+# Backend ve asistan adresleri Vite tarafından DERLEME anında gömülür
+# (import.meta.env.VITE_*); çalışma anında değiştirilemez. Farklı ortam = farklı build-arg.
 ARG VITE_API_URL=http://localhost:8000
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_ASISTAN_URL=http://localhost:8100
+ENV VITE_ASISTAN_URL=$VITE_ASISTAN_URL
 
 COPY . .
 RUN npm run build

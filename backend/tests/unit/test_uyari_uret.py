@@ -58,7 +58,9 @@ async def test_bos_ozet_veri_llm_cagrilmaz() -> None:
     sorgular = SahteAnlikOzetSorgusu([])
     uretici = SahteUyariUreticisi([UYARI])
     depo = SahteUyariDeposu()
-    use_case = UyariUret(sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER)
+    use_case = UyariUret(
+        sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER
+    )
 
     sonuc = await use_case.calistir()
 
@@ -71,7 +73,9 @@ async def test_tum_hatlar_esik_altinda_llm_cagrilmaz() -> None:
     sorgular = SahteAnlikOzetSorgusu([OZET_SEYREK])
     uretici = SahteUyariUreticisi([UYARI])
     depo = SahteUyariDeposu()
-    use_case = UyariUret(sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER)
+    use_case = UyariUret(
+        sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER
+    )
 
     sonuc = await use_case.calistir()
 
@@ -84,7 +88,9 @@ async def test_yogun_hat_sadece_o_satir_llme_gider_ve_depoya_yazilir() -> None:
     sorgular = SahteAnlikOzetSorgusu([OZET_SEYREK, OZET_YOGUN])
     uretici = SahteUyariUreticisi([UYARI])
     depo = SahteUyariDeposu()
-    use_case = UyariUret(sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER)
+    use_case = UyariUret(
+        sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER
+    )
 
     sonuc = await use_case.calistir()
 
@@ -97,7 +103,9 @@ async def test_llm_bos_liste_donerse_depoya_yazma_atlanir() -> None:
     sorgular = SahteAnlikOzetSorgusu([OZET_YOGUN])
     uretici = SahteUyariUreticisi([])
     depo = SahteUyariDeposu()
-    use_case = UyariUret(sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER)
+    use_case = UyariUret(
+        sorgular=sorgular, uyari_uretici=uretici, uyari_deposu=depo, esikler=ESIKLER
+    )
 
     sonuc = await use_case.calistir()
 
