@@ -271,12 +271,144 @@ Ayrıntılar: [asistan/README.md](asistan/README.md)
   <details>
     <summary><h2>Product Screenshot</h2></summary>
 
+- The backend (FastAPI + PostgreSQL + Redis + MQTT) was deployed with a full hexagonal architecture: ingest, real-time state, REST API, and WebSocket broadcast were all implemented and tested end-to-end.
+- The admin panel (React) was built with a login page, dashboard, live map, lines, and stops pages, connected to the backend via REST and WebSocket.
+- An AI recommendation engine was added: a weekly-pattern detector (30-day window) produces operational suggestions, and a live-alert detector (3-hour window) flags currently congested lines — both interpreted by an LLM (Gemini or a local Ollama model).
+- A local chatbot assistant (OpenJarvis + Ollama) was integrated into the panel, answering density questions by calling the backend API directly — no data leaves the machine by default.
+- The CSRNet crowd-density model was run locally/on Kaggle against real bus/road footage, producing a density heatmap and a people-count estimate per frame.
+- The trained model was evaluated against ground-truth counts on labeled crowd images to measure estimation error.
+- A dedicated test dataset was built from bus interior video frames, manually labeled with the person count per frame, to validate the density pipeline end-to-end.
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+- Backend (FastAPI + PostgreSQL + Redis + MQTT) tam heksagonal mimariyle deploy edildi: veri alımı, anlık durum, REST API ve WebSocket yayını uçtan uca geliştirilip test edildi.
+- Admin panel (React) giriş, gösterge paneli, canlı harita, hatlar ve duraklar sayfalarıyla kuruldu; REST ve WebSocket üzerinden backend'e bağlandı.
+- Bir AI öneri motoru eklendi: haftalık örüntü tespiti (30 günlük pencere) operasyonel öneriler üretiyor, anlık uyarı tespiti (3 saatlik pencere) o an yoğun olan hatları işaretliyor — ikisi de bir LLM (Gemini veya lokal Ollama modeli) tarafından yorumlanıyor.
+- Panele lokal bir chatbot asistanı (OpenJarvis + Ollama) entegre edildi; yoğunluk sorularını doğrudan backend API'sini çağırarak yanıtlıyor — varsayılan kurulumda hiçbir veri makineden çıkmıyor.
+- CSRNet kalabalık yoğunluğu modeli lokal/Kaggle üzerinde gerçek otobüs/yol görüntülerine karşı çalıştırılarak yoğunluk ısı haritası ve kare başına kişi sayısı tahmini üretildi.
+- Eğitilmiş model, etiketlenmiş kalabalık görüntüleri üzerinde gerçek (ground-truth) sayımlarla karşılaştırılarak tahmin hatası ölçüldü.
+- Yoğunluk hattını uçtan uca doğrulamak için otobüs içi video karelerinden, kare başına kişi sayısı manuel olarak etiketlenmiş özel bir test veri seti oluşturuldu.
+
+</details>
+
+![Login](assets/sprint2/01-giris.png)
+![Dashboard](assets/sprint2/02-panel.png)
+![Asistana Soru Sorma](assets/sprint2/03-asistan-soru.png)
+![Asistan Cevabı](assets/sprint2/04-asistan-cevap.png)
+![Hatlar](assets/sprint2/lines.png)
+![Canlı Harita](assets/sprint2/live-map.png)
+![Duraklar](assets/sprint2/stops.png)
+![CSRNet Yoğunluk Haritası](assets/sprint2/05-csrnet-yogunluk-haritasi.jpeg)
+![CSRNet Model Değerlendirme](assets/sprint2/06-csrnet-model-degerlendirme.jpeg)
+![Test Veri Seti](assets/sprint2/07-test-veri-seti.jpeg)
+
+  </details>
+
+---
+
+  <details>
+    <summary><h2>AI Motoru Kanıtları (Local, Ollama)</h2></summary>
+
+Backend'in `AI_MOTOR=local` modunda, hiçbir veri makineden çıkmadan Ollama üzerinde çalışan `turkish-gemma-9b-v0.1` modeliyle ürettiği gerçek öneri/uyarı çıktıları:
+
+```text
+===================================================================
+ YOTAY — YEREL AI MOTORU (OpenJarvis SimpleAgent + Ollama)
+ Kanit loglari — 18.07.2026 17:35
+===================================================================
+
+### 1) Motor yapilandirmasi (veri makineden cikmiyor)
+    local
+    http://localhost:11434
+    alibayram/turkish-gemma-9b-v0.1:latest
+
+### 2) Servis sagligi
+    {
+        "durum": "ok",
+        "bagimliliklar": {
+            "postgres": "ok",
+            "redis": "ok",
+            "mqtt": "ok"
+        }
+    }
+
+### 3) Yerel model ile URETILEN ONERILER (Ollama, internet yok)
+    [
+        {
+            "id": 3,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 8,
+            "saat_bitis": 9,
+            "ortalama_doluluk": 0.8829861111111109,
+            "karsilastirma_ortalama_doluluk": 0.4018634259259261,
+            "oneri_metni": "Pazartesi sabah 8'de sefer sayısını artırmayı düşünün",
+            "gerekce": "Ortalama doluluk oranı (0.88) diğer günlere göre belirgin şekilde yüksek.",
+            "olusturulma_zamani": "2026-07-18T14:29:03.821817Z"
+        },
+        {
+            "id": 4,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 9,
+            "saat_bitis": 10,
+            "ortalama_doluluk": 0.8673611111111111,
+            "karsilastirma_ortalama_doluluk": 0.40239583333333345,
+            "oneri_metni": "Pazartesi sabah 9'da sefer sayısını artırmayı düşünün",
+            "gerekce": "Ortalama doluluk oranı (0.87) diğer günlere göre belirgin şekilde yüksek.",
+            "olusturulma_zamani": "2026-07-18T14:29:03.821817Z"
+        },
+        {
+            "id": 1,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 8,
+            "saat_bitis": 8,
+            "ortalama_doluluk": 0.8829861111111109,
+            "karsilastirma_ortalama_doluluk": 0.4018634259259261,
+            "oneri_metni": "Pazartesi sabahı 08:00 seferlerinde doluluk oranının yüksek olduğu gözlemlenmiştir. Trafik yoğunluğunu azaltmak için ek araç veya daha sık sefer periyotunu değerlendirin.",
+            "gerekce": "Doluluk oranı (0.88) diğer günlere kıyasla belirgin şekilde yüksektir.",
+            "olusturulma_zamani": "2026-07-18T13:37:06.532671Z"
+        },
+        {
+            "id": 2,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 9,
+            "saat_bitis": 9,
+            "ortalama_doluluk": 0.8673611111111111,
+            "karsilastirma_ortalama_doluluk": 0.40239583333333345,
+            "oneri_metni": "Pazartesi sabahı 09:00 seferlerinde doluluk oranının yüksek olduğu gözlemlenmiştir. Trafik yoğunluğunu azaltmak için ek araç veya daha sık sefer periyotunu değerlendirin.",
+            "gerekce": "Doluluk oranı (0.87) diğer günlere kıyasla belirgin şekilde yüksektir.",
+            "olusturulma_zamani": "2026-07-18T13:37:06.532671Z"
+        }
+    ]
+
+### 4) Yerel model ile URETILEN UYARILAR
+    [
+        {
+            "id": 1,
+            "hat_id": 3,
+            "ortalama_doluluk": 1.5271604938271603,
+            "ortalama_kisi": 45.81481481481482,
+            "uyari_metni": "Yoğunluk eşiği aşılmıştır. Ek sefer değerlendirilebilir.",
+            "gerekce": "Ortalama doluluk oranı %152.7 olarak ölçülmüştür.",
+            "olusturulma_zamani": "2026-07-18T14:30:36.843826Z"
+        }
+    ]
+```
+
   </details>
 
 ---
 
   <details>
     <summary><h2>Sprint Board Update</h2></summary>
+
+![Sprint 2 Burndown Chart](assets/sprint2/burndown-chart.png)
+![Trello Board](assets/sprint2/08-trello-board.png)
+![Trello Board (Güncel)](assets/sprint2/09-trello-board-guncel.png)
 
   </details>
 
@@ -285,12 +417,51 @@ Ayrıntılar: [asistan/README.md](asistan/README.md)
   <details>
     <summary><h2>Daily Scrum</h2></summary>
 
+![Daily Meet](assets/sprint2/10-daily-meet.png)
+![WhatsApp — Veri Seti Koordinasyonu](assets/sprint2/11-whatsapp-veri-seti.png)
+![WhatsApp — Görev Koordinasyonu](assets/sprint2/12-whatsapp-koordinasyon.png)
+![WhatsApp — Model Sonuçları](assets/sprint2/13-whatsapp-model-sonuclari.png)
+![WhatsApp — PR Koordinasyonu](assets/sprint2/14-whatsapp-pr-koordinasyon.png)
+
   </details>
 
 ---
 
   <details>
     <summary><h2>Sprint Notes</h2></summary>
+
+- Backend development began: hexagonal architecture skeleton, data model, idempotent seed, MQTT ingest, Redis live state, REST API, and WebSocket broadcast were built in incremental phases.
+- The admin panel frontend was scaffolded in React: login, dashboard (with an interactive passenger density chart), live map, lines, and stops pages were implemented.
+- CORS middleware was made configurable so the panel (different origin/port) could call the backend safely.
+- The frontend was containerized with a production Nginx service, and the Lines page was connected to the real `/api/hatlar` endpoint.
+- JWT-based authentication was added to the backend and wired into the panel's login flow.
+- A local chatbot assistant (OpenJarvis on Ollama) was researched and built as a separate service, reading live density data from the backend via tool calls; an optional cloud (Gemini) engine was added later for cases where the local model's answer quality is insufficient.
+- An AI recommendation/alert engine was designed and implemented directly in the backend (hexagonal ports/adapters): a weekly-pattern SQL query feeds an LLM for the "AI Suggestions" flow, and a 3-hour anomaly query feeds a "Recent Alerts" flow — both support Gemini and a local Ollama model behind the same port.
+- A root-level `docker-compose.yml` was added so the full stack (panel + backend + assistant + local LLM) can be started with a single command.
+- GitHub Pages documentation was expanded (architecture, API/MQTT contracts, AI engine, assistant) to keep the project log up to date.
+
+- **Expected point completion within Sprint:** 400 points
+
+- **Point Completion Logic:** As planned in Sprint 1, the development phase began in Sprint 2 with a target of 400 points; all 15 backlog stories tracked on the burndown chart were completed within the 14-day window, bringing the remaining points to 0 by Day 14.
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+- Backend geliştirmesine başlandı: heksagonal mimari iskeleti, veri modeli, idempotent tohum verisi, MQTT veri alımı, Redis anlık durum, REST API ve WebSocket yayını aşamalı olarak geliştirildi.
+- Admin panel frontend'i React ile iskeletlendi: giriş, gösterge paneli (etkileşimli yolcu yoğunluğu grafiğiyle), canlı harita, hatlar ve duraklar sayfaları hayata geçirildi.
+- Panel (farklı origin/port) backend'i güvenle çağırabilsin diye CORS middleware yapılandırılabilir hale getirildi.
+- Frontend, üretim Nginx servisiyle konteynerlenip Hatlar sayfası gerçek `/api/hatlar` ucuna bağlandı.
+- Backend'e JWT tabanlı kimlik doğrulama eklendi ve panelin giriş akışına kablolandı.
+- Ollama üzerinde OpenJarvis tabanlı lokal bir chatbot asistanı araştırılıp ayrı bir servis olarak inşa edildi; backend'den canlı yoğunluk verisini tool çağrılarıyla okuyor. Lokal modelin cevap kalitesi yetmediğinde kullanılabilecek opsiyonel bir bulut (Gemini) motoru daha sonra eklendi.
+- Backend içinde (heksagonal port/adaptör mimarisiyle) doğrudan bir AI öneri/uyarı motoru tasarlanıp geliştirildi: haftalık örüntü SQL sorgusu "AI Önerileri" akışını, 3 saatlik anomali sorgusu "Son Uyarılar" akışını besliyor — ikisi de aynı port arkasında hem Gemini'yi hem lokal bir Ollama modelini destekliyor.
+- Kök dizine bir `docker-compose.yml` eklendi, böylece tüm sistem (panel + backend + asistan + lokal LLM) tek komutla ayağa kalkabiliyor.
+- Proje günlüğünü güncel tutmak için GitHub Pages dokümantasyonu genişletildi (mimari, API/MQTT sözleşmeleri, AI motoru, asistan).
+
+- **Sprint İçinde Tamamlanması Beklenen Puan:** 400 puan
+
+- **Puan Tamamlama Mantığı:** Sprint 1'de planlandığı gibi Sprint 2'de geliştirme aşamasına 400 puan hedefiyle geçildi; burndown chart'ta takip edilen 15 backlog story'nin tamamı 14 günlük pencerede tamamlanarak kalan puan 14. günde 0'a indirildi.
+
+</details>
 
   </details>
 
@@ -299,12 +470,48 @@ Ayrıntılar: [asistan/README.md](asistan/README.md)
   <details>
     <summary><h2>Sprint Review</h2></summary>
 
+- The backend was deployed end-to-end with a fully test-covered hexagonal architecture (MQTT ingest, Redis live state, REST API, WebSocket broadcast, JWT authentication).
+- The admin panel frontend was connected to the real backend across its core screens (login, dashboard, lines, live map, stops).
+- Two AI-driven capabilities were shipped: an automatic recommendation/alert engine running inside the backend, and an interactive chatbot assistant running as a separate, privacy-conscious service.
+- A single-command, full-stack Docker Compose setup was delivered, lowering the barrier for anyone on the team (or evaluators) to run the whole system locally.
+- Documentation (root README, backend README, GitHub Pages site) was kept in sync with the fast pace of development.
+
+- **Sprint Review Participants:** Bilal Solmaz, Kübra Güler, Saadettın Berber, Özlem Çal, Pınar Akdoğan
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+- Backend, tam test kapsamına sahip heksagonal mimariyle uçtan uca deploy edildi (MQTT veri alımı, Redis anlık durum, REST API, WebSocket yayını, JWT kimlik doğrulama).
+- Admin panel frontend'i temel ekranlarında (giriş, gösterge paneli, hatlar, canlı harita, duraklar) gerçek backend'e bağlandı.
+- İki AI destekli yetenek hayata geçirildi: backend içinde çalışan otomatik öneri/uyarı motoru ve ayrı, gizliliğe duyarlı bir servis olarak çalışan etkileşimli chatbot asistanı.
+- Tek komutla ayağa kalkan tam-stack Docker Compose kurulumu teslim edildi; bu, ekipteki (veya değerlendiricilerdeki) herkesin sistemi lokal olarak çalıştırmasını kolaylaştırdı.
+- Dokümantasyon (kök README, backend README, GitHub Pages sitesi) geliştirmenin hızına ayak uydurarak güncel tutuldu.
+
+- **Sprint Review Katılımcıları:** Bilal Solmaz, Kübra Güler, Saadettın Berber, Özlem Çal, Pınar Akdoğan
+
+</details>
+
   </details>
 
 ---
 
   <details>
     <summary><h2>Sprint Retrospective</h2></summary>
+
+- The AI recommendation/alert engine and the chatbot assistant were built in parallel by different team members without early alignment on architecture; a merge was needed afterwards to reconcile both into a single source of truth. Earlier coordination on shared modules (LLM provider abstraction, Docker Compose) is planned for Sprint 3.
+- Downloading larger local LLM models over an unstable connection caused repeated interruptions; a fallback to a smaller model or a documented retry strategy will be considered going forward.
+- The image-processing model (CSRNet) integration and the live density map UI are carried over to Sprint 3, alongside connecting the "AI Suggestions" and "Recent Alerts" cards on the dashboard to the real backend endpoints.
+- Frontend-backend Docker deployment will be finalized and documented as a single, reproducible flow in Sprint 3.
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+- AI öneri/uyarı motoru ile chatbot asistanı, farklı takım üyeleri tarafından mimari üzerinde erken hizalanmadan paralel geliştirildi; sonrasında ikisini tek bir doğru kaynakta birleştirmek için bir merge gerekti. Paylaşılan modüller (LLM sağlayıcı soyutlaması, Docker Compose) üzerinde daha erken koordinasyon Sprint 3 için planlanıyor.
+- Kararsız bir bağlantı üzerinden büyük lokal LLM modelleri indirmek tekrar tekrar kesintiye uğradı; ileride daha küçük bir modele düşme ya da belgelenmiş bir yeniden deneme stratejisi değerlendirilecek.
+- Görüntü işleme modeli (CSRNet) entegrasyonu ve canlı yoğunluk haritası arayüzü, gösterge panelindeki "AI Önerileri" ve "Son Uyarılar" kartlarının gerçek backend uçlarına bağlanmasıyla birlikte Sprint 3'e devrediliyor.
+- Frontend-backend Docker deploy'u Sprint 3'te tek, tekrarlanabilir bir akış olarak sonlandırılıp belgelenecek.
+
+</details>
 
   </details>
 

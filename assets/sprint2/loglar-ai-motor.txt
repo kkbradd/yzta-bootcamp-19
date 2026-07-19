@@ -1,0 +1,84 @@
+===================================================================
+ YOTAY — YEREL AI MOTORU (OpenJarvis SimpleAgent + Ollama)
+ Kanit loglari — 18.07.2026 17:35
+===================================================================
+
+### 1) Motor yapilandirmasi (veri makineden cikmiyor)
+    local
+    http://localhost:11434
+    alibayram/turkish-gemma-9b-v0.1:latest
+
+### 2) Servis sagligi
+    {
+        "durum": "ok",
+        "bagimliliklar": {
+            "postgres": "ok",
+            "redis": "ok",
+            "mqtt": "ok"
+        }
+    }
+
+### 3) Yerel model ile URETILEN ONERILER (Ollama, internet yok)
+    [
+        {
+            "id": 3,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 8,
+            "saat_bitis": 9,
+            "ortalama_doluluk": 0.8829861111111109,
+            "karsilastirma_ortalama_doluluk": 0.4018634259259261,
+            "oneri_metni": "Pazartesi sabah 8'de sefer say\u0131s\u0131n\u0131 art\u0131rmay\u0131 d\u00fc\u015f\u00fcn\u00fcn",
+            "gerekce": "Ortalama doluluk oran\u0131 (0.88) di\u011fer g\u00fcnlere g\u00f6re belirgin \u015fekilde y\u00fcksek.",
+            "olusturulma_zamani": "2026-07-18T14:29:03.821817Z"
+        },
+        {
+            "id": 4,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 9,
+            "saat_bitis": 10,
+            "ortalama_doluluk": 0.8673611111111111,
+            "karsilastirma_ortalama_doluluk": 0.40239583333333345,
+            "oneri_metni": "Pazartesi sabah 9'da sefer say\u0131s\u0131n\u0131 art\u0131rmay\u0131 d\u00fc\u015f\u00fcn\u00fcn",
+            "gerekce": "Ortalama doluluk oran\u0131 (0.87) di\u011fer g\u00fcnlere g\u00f6re belirgin \u015fekilde y\u00fcksek.",
+            "olusturulma_zamani": "2026-07-18T14:29:03.821817Z"
+        },
+        {
+            "id": 1,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 8,
+            "saat_bitis": 8,
+            "ortalama_doluluk": 0.8829861111111109,
+            "karsilastirma_ortalama_doluluk": 0.4018634259259261,
+            "oneri_metni": "Pazartesi sabah\u0131 08:00 seferlerinde doluluk oran\u0131n\u0131n y\u00fcksek oldu\u011fu g\u00f6zlemlenmi\u015ftir. Trafik yo\u011funlu\u011funu azaltmak i\u00e7in ek ara\u00e7 veya daha s\u0131k sefer periyotunu de\u011ferlendirin.",
+            "gerekce": "Doluluk oran\u0131 (0.88) di\u011fer g\u00fcnlere k\u0131yasla belirgin \u015fekilde y\u00fcksektir.",
+            "olusturulma_zamani": "2026-07-18T13:37:06.532671Z"
+        },
+        {
+            "id": 2,
+            "hat_id": 1,
+            "gun_no": 1,
+            "saat_baslangic": 9,
+            "saat_bitis": 9,
+            "ortalama_doluluk": 0.8673611111111111,
+            "karsilastirma_ortalama_doluluk": 0.40239583333333345,
+            "oneri_metni": "Pazartesi sabah\u0131 09:00 seferlerinde doluluk oran\u0131n\u0131n y\u00fcksek oldu\u011fu g\u00f6zlemlenmi\u015ftir. Trafik yo\u011funlu\u011funu azaltmak i\u00e7in ek ara\u00e7 veya daha s\u0131k sefer periyotunu de\u011ferlendirin.",
+            "gerekce": "Doluluk oran\u0131 (0.87) di\u011fer g\u00fcnlere k\u0131yasla belirgin \u015fekilde y\u00fcksektir.",
+            "olusturulma_zamani": "2026-07-18T13:37:06.532671Z"
+        }
+    ]
+
+### 4) Yerel model ile URETILEN UYARILAR
+    [
+        {
+            "id": 1,
+            "hat_id": 3,
+            "ortalama_doluluk": 1.5271604938271603,
+            "ortalama_kisi": 45.81481481481482,
+            "uyari_metni": "Yo\u011funluk e\u015fi\u011fi a\u015f\u0131lm\u0131\u015ft\u0131r. Ek sefer de\u011ferlendirilebilir.",
+            "gerekce": "Ortalama doluluk oran\u0131 %152.7 olarak \u00f6l\u00e7\u00fclm\u00fc\u015ft\u00fcr.",
+            "olusturulma_zamani": "2026-07-18T14:30:36.843826Z"
+        }
+    ]
