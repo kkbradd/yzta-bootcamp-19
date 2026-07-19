@@ -104,6 +104,11 @@
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
   mermaid.initialize({ startOnLoad: false, theme: "neutral" });
   window.__mermaid = mermaid;
+  // Modül betiği ertelendiği için sayfa ilk render'ı bundan önce olabilir.
+  // O durumda diyagram ham metin kalıyordu (yalnız doğrudan/yenilenmiş
+  // açılışta; menüden gezinince geç kaldığı için sorun görünmüyordu).
+  window.__mermaidHazir = true;
+  document.dispatchEvent(new Event("mermaid-hazir"));
 </script>
 </head>
 <body>
@@ -160,8 +165,9 @@ const SAYFALAR = [
   { baslik: "REST & WebSocket", dosya: "api.md" },
   { baslik: "MQTT Sözleşmesi", dosya: "mqtt.md" },
 
-  { grup: "Asistan" },
+  { grup: "Yapay Zekâ" },
   { baslik: "Asistan (Chatbot)", dosya: "asistan.md" },
+  { baslik: "Öneri & Uyarı Motoru", dosya: "ai-motoru.md" },
 
   { grup: "Ürün" },
   { baslik: "Ekran Görüntüleri", dosya: "ekranlar.md" },
@@ -257,6 +263,19 @@ function mdToHtml(ham){
   return html;
 }
 
+/* Mermaid modülü henüz yüklenmemişse hazır olduğunda tekrar dener;
+   yoksa doğrudan/yenilenmiş açılışta diyagram ham metin kalıyor. */
+function mermaidCiz(){
+  const bloklar=icerik.querySelectorAll("div.mermaid:not([data-cizildi])");
+  if(!bloklar.length) return;
+  if(!window.__mermaidHazir){
+    document.addEventListener("mermaid-hazir", mermaidCiz, {once:true});
+    return;
+  }
+  bloklar.forEach(b=>b.setAttribute("data-cizildi","1"));
+  window.__mermaid.run({nodes:bloklar});
+}
+
 /* ---- Kod vurgulama + mermaid ---- */
 function vurgula(){
   icerik.querySelectorAll("pre code.language-mermaid").forEach(kod=>{
@@ -264,10 +283,7 @@ function vurgula(){
     div.className="mermaid"; div.textContent=kod.textContent;
     kod.closest("pre").replaceWith(div);
   });
-  if(window.__mermaid){
-    const bloklar=icerik.querySelectorAll("div.mermaid");
-    if(bloklar.length) window.__mermaid.run({nodes:bloklar});
-  }
+  mermaidCiz();
   if(window.hljs){
     icerik.querySelectorAll("pre code.language-jsonc").forEach(kod=>kod.classList.replace("language-jsonc","language-json"));
     icerik.querySelectorAll("pre code:not(.language-mermaid)").forEach(kod=>window.hljs.highlightElement(kod));

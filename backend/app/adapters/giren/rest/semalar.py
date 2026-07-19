@@ -105,3 +105,32 @@ class OturumAcIstegi(BaseModel):
 class OturumYaniti(BaseModel):
     erisim_tokeni: str
     token_tipi: Literal["bearer"] = "bearer"
+
+
+# ---- Öneriler ----
+
+
+class OneriYaniti(BaseModel):
+    id: int | None
+    hat_id: int
+    gun_no: int
+    saat_baslangic: int
+    saat_bitis: int
+    ortalama_doluluk: float
+    karsilastirma_ortalama_doluluk: float | None
+    oneri_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime
+
+
+# ---- Son Uyarılar ----
+
+
+class UyariYaniti(BaseModel):
+    id: int | None
+    hat_id: int
+    ortalama_doluluk: float
+    ortalama_kisi: float
+    uyari_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime

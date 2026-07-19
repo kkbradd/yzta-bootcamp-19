@@ -69,6 +69,35 @@ class Kullanici:
 
 
 @dataclass(frozen=True, slots=True)
+class Oneri:
+    """LLM'in bir hat×gün×saat_dilimi örüntüsü için ürettiği operasyonel yorum."""
+
+    hat_id: int
+    gun_no: int  # 0=Pazar..6=Cumartesi (PostgreSQL EXTRACT(DOW) ile birebir)
+    saat_baslangic: int  # 0-23, kova başlangıcı
+    saat_bitis: int  # 0-23, kova bitişi (üst açık)
+    ortalama_doluluk: float
+    karsilastirma_ortalama_doluluk: float | None
+    oneri_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime
+    id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Uyari:
+    """LLM'in son birkaç saatlik anlık yoğunluk durumu için ürettiği operasyonel uyarı."""
+
+    hat_id: int
+    ortalama_doluluk: float
+    ortalama_kisi: float
+    uyari_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime
+    id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Olcum:
     """Tek bir yoğunluk ölçümü; arac/hat alanları ingest anında denormalize edilir."""
 
