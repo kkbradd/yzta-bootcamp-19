@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useClock } from '../hooks/useClock'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
+import { onerileriGetir, uyarilariGetir } from '../api/oneriler'
 
 const generateData = (points, multiplier = 1) => {
   const base = [800, 600, 500, 450, 420, 500, 1200, 3500, 6800, 8200, 7900, 7200,
@@ -56,10 +57,35 @@ const CustomTooltip = ({ active, payload, label, range }) => {
   return null
 }
 
+// Mock veri — SİLİNMEDİ; backend'e ulaşılamazsa yedek (demo) olarak kullanılır.
+const DEMO_UYARILAR = [
+  { id: 'demo-1', title: 'Hat 502', desc: 'Kaza nedeniyle güzergah değişikliği.', time: '14:45', color: '#ef4444' },
+  { id: 'demo-2', title: 'Hat 12', desc: 'Araç arızası: Teknik ekip yönlendirildi.', time: '14:32', color: '#f59e0b' },
+  { id: 'demo-3', title: 'Durak 104', desc: 'Yüksek yolcu yoğunluğu tespit edildi.', time: '14:10', color: '#3b82f6' },
+]
+
+const DEMO_ONERILER = [
+  { id: 'demo-1', priority: 'High Priority', text: 'Hat 5 için yoğunluk nedeniyle 2 ek sefer planlanmalı.', color: '#ef4444', bg: '#fef2f2' },
+  { id: 'demo-2', priority: 'Medium Priority', text: 'Üniversite durağındaki yığılma için Hat 102 yönlendirilmeli.', color: '#f59e0b', bg: '#fffbeb' },
+]
+
 export default function DashboardPage({ onNavigate }) {
   const time = useClock()
   const [selectedRange, setSelectedRange] = useState('24h')
   const [selectedRoute, setSelectedRoute] = useState('all')
+  const [uyarilar, setUyarilar] = useState(DEMO_UYARILAR)
+  const [oneriler, setOneriler] = useState(DEMO_ONERILER)
+
+  useEffect(() => {
+    let iptal = false
+    uyarilariGetir()
+      .then((veri) => { if (!iptal) setUyarilar(veri) })
+      .catch(() => { if (!iptal) setUyarilar(DEMO_UYARILAR) })
+    onerileriGetir()
+      .then((veri) => { if (!iptal) setOneriler(veri) })
+      .catch(() => { if (!iptal) setOneriler(DEMO_ONERILER) })
+    return () => { iptal = true }
+  }, [])
 
   const currentRange = timeRanges.find(r => r.value === selectedRange)
   const data = generateData(currentRange.points, currentRange.multiplier)
@@ -186,12 +212,10 @@ export default function DashboardPage({ onNavigate }) {
                   <div style={styles.cardTitle}>🔔 Son Uyarılar</div>
                   <a href="#" style={styles.linkBtn}>Tümünü Gör</a>
                 </div>
-                {[
-                  { title: 'Hat 502', desc: 'Kaza nedeniyle güzergah değişikliği.', time: '14:45', color: '#ef4444' },
-                  { title: 'Hat 12', desc: 'Araç arızası: Teknik ekip yönlendirildi.', time: '14:32', color: '#f59e0b' },
-                  { title: 'Durak 104', desc: 'Yüksek yolcu yoğunluğu tespit edildi.', time: '14:10', color: '#3b82f6' },
-                ].map(alert => (
-                  <div key={alert.title} style={styles.alertItem}>
+                {uyarilar.length === 0 ? (
+                  <div style={styles.emptyState}>Şu anda aktif uyarı yok.</div>
+                ) : uyarilar.map(alert => (
+                  <div key={alert.id} style={styles.alertItem}>
                     <div style={{ ...styles.alertBar, background: alert.color }} />
                     <div style={{ flex: 1 }}>
                       <div style={styles.alertTitle}>{alert.title}</div>
@@ -201,17 +225,20 @@ export default function DashboardPage({ onNavigate }) {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
 
-              {/* AI Önerileri */}
-              <div style={styles.card}>
-                <div style={styles.cardHeaderRow}>
-                  <div style={styles.cardTitle}>🤖 AI Önerileri</div>
-                </div>
-                {[
-                  { priority: 'High Priority', text: 'Hat 5 için yoğunluk nedeniyle 2 ek sefer planlanmalı.', color: '#ef4444', bg: '#fef2f2' },
-                  { priority: 'Medium Priority', text: 'Üniversite durağındaki yığılma için Hat 102 yönlendirilmeli.', color: '#f59e0b', bg: '#fffbeb' },
-                ].map(item => (
-                  <div key={item.text} style={styles.aiItem}>
+          {/* AI Önerileri */}
+          <div style={styles.card}>
+            <div style={styles.cardHeaderRow}>
+              <div style={styles.cardTitle}>🤖 AI Önerileri</div>
+            </div>
+            {oneriler.length === 0 ? (
+              <div style={styles.emptyState}>Şu anda öneri yok.</div>
+            ) : (
+              <div style={styles.aiGrid}>
+                {oneriler.map(item => (
+                  <div key={item.id} style={styles.aiItem}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <span style={{ ...styles.priorityBadge, background: item.bg, color: item.color }}>{item.priority}</span>
                       <span style={{ color: '#10b981', fontSize: '14px' }}>✓</span>
@@ -219,9 +246,8 @@ export default function DashboardPage({ onNavigate }) {
                     <div style={styles.aiText}>{item.text}</div>
                   </div>
                 ))}
-                <button style={styles.aiBtn}>Yeni Öneri Oluştur</button>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Yolcu Yoğunluğu Trendi */}
@@ -402,13 +428,11 @@ const styles = {
   alertTitle: { fontSize: '13px', fontWeight: '600', color: '#111827' },
   alertDesc: { fontSize: '12px', color: '#6b7280', marginTop: '2px' },
   alertTime: { fontSize: '11px', color: '#9ca3af', flexShrink: 0 },
-  aiItem: { background: '#f9fafb', borderRadius: '8px', padding: '10px', marginBottom: '8px' },
+  aiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' },
+  aiItem: { background: '#f9fafb', borderRadius: '8px', padding: '10px' },
   aiText: { fontSize: '12px', color: '#374151', lineHeight: 1.5 },
   priorityBadge: { fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '999px' },
-  aiBtn: {
-    width: '100%', padding: '9px', background: '#111827', color: 'white',
-    border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-  },
+  emptyState: { fontSize: '12px', color: '#9ca3af', padding: '12px 0', textAlign: 'center' },
   chartCard: { background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' },
   chartHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
   chartControls: { display: 'flex', alignItems: 'center', gap: '12px' },

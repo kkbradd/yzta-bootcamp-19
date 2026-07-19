@@ -80,7 +80,7 @@ export default function LoginPage({ onLogin }) {
                   </svg>
                   <input
                     type="email"
-                    placeholder="admin@belediye.gov.tr"
+                    placeholder="admin@demo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     style={styles.input}

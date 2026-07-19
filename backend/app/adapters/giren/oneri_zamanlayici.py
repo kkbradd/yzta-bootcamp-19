@@ -1,6 +1,7 @@
 """Zamanlanmış öneri üretimi: haftada bir (varsayılan Pazartesi 06:00) OneriUret'i
-tetikleyen arka plan görevi. MqttIngest ile aynı desen: sonsuz uyku döngüsü,
-istisna görevi öldürmez.
+tetikleyen arka plan görevi. Ayrıca her açılışta (container start) haftalık
+zamanlamayı beklemeden bir kez hemen çalışır — panel boot'ta boş görünmesin diye.
+MqttIngest ile aynı desen: sonsuz uyku döngüsü, istisna görevi öldürmez.
 """
 
 import asyncio
@@ -25,12 +26,25 @@ class OneriZamanlayici:
         self._son_calisma_haftasi: tuple[int, int] | None = None
 
     async def calistir(self) -> None:
+        try:
+            await self._acilista_calistir()
+        except Exception:
+            logger.exception("öneri zamanlayıcı açılış çalıştırması hatası")
         while True:
             try:
                 await self._kontrol_et()
             except Exception:
                 logger.exception("öneri zamanlayıcı kontrol hatası")
             await asyncio.sleep(_KONTROL_PERIYODU_SN)
+
+    async def _acilista_calistir(self) -> None:
+        """Her container açılışında (haftalık bariyerden bağımsız) bir kez çalışır."""
+        logger.info("açılışta öneri üretimi başlıyor")
+        oneriler = await self._oneri_uret.calistir()
+        logger.info("açılışta öneri üretimi tamamlandı, üretilen=%d", len(oneriler))
+        # Açılış anı tam da haftalık çalışma penceresine denk gelirse _kontrol_et
+        # aynı gün ikinci kez tetiklemesin diye bariyer burada da işaretlenir.
+        self._son_calisma_haftasi = datetime.now(UTC).isocalendar()[:2]
 
     async def _kontrol_et(self) -> None:
         simdi = datetime.now(UTC)

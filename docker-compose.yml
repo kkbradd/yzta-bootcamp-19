@@ -46,9 +46,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
-      # AI öneri/uyarı motoru. Varsayılan lokal: veri makineden çıkmaz.
-      # Gemini'ye geçmek için kök .env'e AI_MOTOR=gemini ve GEMINI_API_KEY yaz.
-      # DİKKAT: o modda yoğunluk verisi Google'a gider.
+      # AI Önerileri (30 günlük örüntü) + Son Uyarılar (3 saatlik anlık) motorları
+      # açılışta hemen ve ardından periyodik çalışır. Varsayılan lokal: veri
+      # makineden çıkmaz. Gemini'ye geçmek için kök .env'e AI_MOTOR=gemini ve
+      # GEMINI_API_KEY yaz — DİKKAT: o modda yoğunluk verisi Google'a gider.
       AI_MOTOR: ${AI_MOTOR:-local}
       OLLAMA_ADRESI: http://ollama:11434
       YEREL_MODEL: ${YEREL_MODEL:-alibayram/turkish-gemma-9b-v0.1:latest}
