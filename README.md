@@ -8,7 +8,7 @@
 |:-------:|:-----:|:--------:|
 | Bilal Solmaz | Product Owner | |
 | Kübra Güler | Scrum Master | [<img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20"/>](https://github.com/kkbradd) [<img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" width="20"/>](https://www.linkedin.com/in/kubradguler/) |
-| Saadettın Berber | Developer | [<img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20"/>](https://github.com/saadettinBerber) |
+| Saadettin Berber | Developer | [<img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20"/>](https://github.com/saadettinBerber) |
 | Özlem Çal | Developer | [<img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20"/>](https://github.com/zcallz) |
 | Pınar Akdoğan | Developer | |
 
@@ -208,7 +208,7 @@ Ayrıntılar: [asistan/README.md](asistan/README.md)
 - The possibility of presenting insights via multi-agent systems was discussed and agreed upon as a future direction.
 - Features and enhancements expected to be added in upcoming sprints were identified and planned.
 
-- **Sprint Review Participants:** Bilal Solmaz, Kübra Güler, Saadettın Berber, Özlem Çal, Pınar Akdoğan
+- **Sprint Review Participants:** Bilal Solmaz, Kübra Güler, Saadettin Berber, Özlem Çal, Pınar Akdoğan
 
 <details>
   <summary><h4>Türkçe Açıklama</h4></summary>
@@ -219,7 +219,7 @@ Ayrıntılar: [asistan/README.md](asistan/README.md)
 - Multi-agent sistemler aracılığıyla içgörüler sunulabileceği tartışıldı ve gelecek bir hedef olarak benimsendi.
 - İlerleyen sprintlerde eklenmesi beklenen özellikler ve geliştirmeler belirlendi ve planlandı.
 
-- **Sprint Review Katılımcıları:** Bilal Solmaz, Kübra Güler, Saadettın Berber, Özlem Çal, Pınar Akdoğan
+- **Sprint Review Katılımcıları:** Bilal Solmaz, Kübra Güler, Saadettin Berber, Özlem Çal, Pınar Akdoğan
 
 </details>
 
@@ -541,7 +541,7 @@ npm run dev
 - GitHub Pages documentation was significantly expanded to keep the project log in sync with the fast pace of development: architecture, API/MQTT contracts, the AI engine, and the assistant service were all documented.
 - Two independently developed AI workstreams (the backend recommendation/alert engine and the separate chatbot assistant) were reconciled and merged into a single, consistent codebase without losing either team member's work.
 
-- **Sprint Review Participants:** Bilal Solmaz, Kübra Güler, Saadettın Berber, Özlem Çal, Pınar Akdoğan
+- **Sprint Review Participants:** Bilal Solmaz, Kübra Güler, Saadettin Berber, Özlem Çal, Pınar Akdoğan
 
 <details>
   <summary><h4>Türkçe Açıklama</h4></summary>
@@ -560,7 +560,7 @@ npm run dev
 - Proje günlüğünü geliştirmenin hızına ayak uydurarak güncel tutmak için GitHub Pages dokümantasyonu önemli ölçüde genişletildi: mimari, API/MQTT sözleşmeleri, AI motoru ve asistan servisi belgelendi.
 - Birbirinden bağımsız geliştirilen iki AI çalışması (backend'deki öneri/uyarı motoru ve ayrı chatbot asistanı) hiçbir takım üyesinin emeği kaybolmadan tek, tutarlı bir kod tabanında birleştirildi.
 
-- **Sprint Review Katılımcıları:** Bilal Solmaz, Kübra Güler, Saadettın Berber, Özlem Çal, Pınar Akdoğan
+- **Sprint Review Katılımcıları:** Bilal Solmaz, Kübra Güler, Saadettin Berber, Özlem Çal, Pınar Akdoğan
 
 </details>
 
