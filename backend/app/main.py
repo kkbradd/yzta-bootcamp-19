@@ -13,8 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.adapters.cikan.gemini_oneri import GeminiOneriUreticisi
-from app.adapters.cikan.gemini_uyari import GeminiUyariUreticisi
+from app.adapters.cikan._uretici_fabrika import oneri_ureticisi_sec, uyari_ureticisi_sec
 from app.adapters.cikan.guvenlik import BcryptSifreleyici, JwtTokenUretici
 from app.adapters.cikan.postgres.baglanti import (
     motor_olustur,
@@ -95,12 +94,12 @@ def uygulama_olustur() -> FastAPI:
         )
 
         sorgular = PostgresSorgular(oturum_fabrikasi)
+        # AI motoru (local|gemini) AI_MOTOR ile seçilir; anahtarsız local'de çökmez
+        # ve local seçiliyken Gemini'ye fallback yoktur (bkz. _uretici_fabrika).
         oneri_deposu = PostgresOneriDeposu(oturum_fabrikasi)
         oneri_uret = OneriUret(
             sorgular=sorgular,
-            oneri_uretici=GeminiOneriUreticisi(
-                api_key=ayarlar.gemini_api_key, model=ayarlar.gemini_model
-            ),
+            oneri_uretici=oneri_ureticisi_sec(ayarlar),
             oneri_deposu=oneri_deposu,
             gun_pencere=ayarlar.oneri_gun_pencere,
         )
@@ -108,9 +107,7 @@ def uygulama_olustur() -> FastAPI:
         uyari_deposu = PostgresUyariDeposu(oturum_fabrikasi)
         uyari_uret = UyariUret(
             sorgular=sorgular,
-            uyari_uretici=GeminiUyariUreticisi(
-                api_key=ayarlar.gemini_api_key, model=ayarlar.gemini_model
-            ),
+            uyari_uretici=uyari_ureticisi_sec(ayarlar),
             uyari_deposu=uyari_deposu,
             esikler=esikler,
             saat_pencere=ayarlar.uyari_saat_pencere,

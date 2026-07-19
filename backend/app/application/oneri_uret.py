@@ -36,7 +36,7 @@ class OneriUret:
     sorgular: HaftalikOruntuSorgusuPort
     oneri_uretici: OneriUreticiPort
     oneri_deposu: OneriDeposuPort
-    gun_pencere: int = 14
+    gun_pencere: int = 30  # Ayarlar.oneri_gun_pencere ile tutarlı (30 günlük pencere).
 
     async def calistir(self) -> list[Oneri]:
         bitis = datetime.now(UTC)
