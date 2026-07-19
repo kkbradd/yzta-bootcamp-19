@@ -36,9 +36,9 @@ cp ~/otobus_ici.mp4 edge/videolar/otobus.mp4
 Varsayılan yol `/uygulama/videolar/otobus.mp4`; başka isim kullanacaksanız
 `EDGE_VIDEO_YOLU` ile bildirin. Videolar depoya girmez (`.gitignore`).
 
-**2. Model ağırlığı.** `model/README.md`'deki talimatla `model/` altına indirin.
-Konteyner çalışırken **ağa hiç çıkmaz**: dosya oradaysa çalışır, yoksa yolu
-söyleyip durur.
+**2. Model ağırlığı.** Bir şey yapmanıza gerek yok — `model/csrnet_partB.pth`
+depoda hazır gelir. Konteyner çalışırken **ağa hiç çıkmaz**: dosya oradaysa
+çalışır, yoksa yolu söyleyip durur. Ayrıntı için `model/README.md`.
 
 ## Ortam değişkenleri
 
@@ -46,7 +46,7 @@ söyleyip durur.
 |---|---|---|
 | `EDGE_MOTOR` | `csrnet` | `csrnet` veya `sahte` |
 | `EDGE_VIDEO_YOLU` | `/uygulama/videolar/otobus.mp4` | Okunacak video |
-| `EDGE_AGIRLIK_YOLU` | `/uygulama/model/partBmodel_best.pth.tar` | CSRNet ağırlığı |
+| `EDGE_AGIRLIK_YOLU` | `/uygulama/model/csrnet_partB.pth` | CSRNet ağırlığı |
 | `EDGE_CIHAZ_ID` | `edge_0001` | Yayın yapılan cihaz kimliği |
 | `EDGE_BROKER` / `EDGE_PORT` | `localhost` / `1883` | MQTT broker |
 | `EDGE_YAYIN_PERIYODU_SN` | `2.0` | İki ölçüm arası süre |

@@ -1,25 +1,56 @@
 # CSRNet ağırlığı
 
-`edge` servisi kişi sayımı için CSRNet kullanır. Ağırlık dosyası **depoya dahil
-değildir** (~124 MB); bu klasöre elle indirilir. Konteyner çalışırken ağa hiç
-çıkmaz — dosya buradaysa çalışır, yoksa yolu söyleyip durur.
+`edge` servisi kişi sayımı için CSRNet kullanır. **Ağırlık depoda hazır gelir**
+(`csrnet_partB.pth`, 65 MB) — depo klonlandığı gibi çalışır, indirme gerekmez.
+Konteyner çalışırken ağa hiç çıkmaz: dosya buradaysa çalışır, yoksa yolu
+söyleyip durur.
 
-## İndirme
+## Dosya nereden geliyor?
+
+ShanghaiTech **Part B** checkpoint'i, orijinal yazarın deposundan alınmış ve
+çıkarım için gereksiz alanlarından arındırılmıştır:
+
+| | Boyut | İçerik |
+|---|---|---|
+| Ham `.pth.tar` | 130.116.993 bayt | `state_dict` + `epoch` + `optimizer` + `best_prec1` |
+| **Depodaki `.pth`** | **65.064.773 bayt** | yalnız `state_dict` (34 tensör) |
+
+`optimizer` state ve `epoch` yalnız eğitime devam etmek için gereklidir;
+çıkarımda kullanılmaz. Atılması dosyayı yarıya indirir ve GitHub'ın 100 MB
+dosya limitinin altına sokar — Git LFS'e gerek kalmaz.
+
+Kaynak checkpoint bilgisi: `epoch 195`, `best_prec1 (MAE) 9.6879`.
+
+## Ham dosyayı yeniden edinmek
+
+Eğitime devam etmek veya doğrulamak isterseniz:
 
 ```bash
-curl -L -o model/partBmodel_best.pth.tar \
+curl -L -o partBmodel_best.pth.tar \
   "https://drive.usercontent.google.com/download?id=1zKn6YlLW3Z9ocgPbP99oz7r2nC7_TBXK&export=download&confirm=t"
 ```
 
-Dosya boyutu **130.116.993 bayt** olmalı. Daha küçükse indirme başarısızdır:
-Google Drive büyük dosyalar için virüs tarama ara sayfası döndürüyor ve HTML'i
-hatasız kaydediyor. `confirm=t` parametresi bunu atlatır. Yanlış dosya inerse
-servis açılışta `torch.load` doğrulamasında anlaşılır bir hatayla durur.
+Boyut **130.116.993 bayt** olmalı. Daha küçükse indirme başarısızdır: Google
+Drive büyük dosyalar için virüs tarama ara sayfası döndürüyor ve HTML'i hatasız
+kaydediyor. `confirm=t` parametresi bunu atlatır. Depodaki indirgenmiş dosyanın
+tercih edilme sebebi de budur — sunum günü Drive kotasına ve internete bağımlı
+kalınmaz.
+
+`state_dict`'e indirgemek için:
+
+```python
+import torch
+kontrol = torch.load("partBmodel_best.pth.tar", map_location="cpu", weights_only=False)
+torch.save(kontrol["state_dict"], "csrnet_partB.pth")
+```
+
+Kod her iki formatı da okur (`csrnet_agi._durum_sozlugu_cikar`), sarılı
+checkpoint de çıplak `state_dict` de yüklenir.
 
 ## Neden Part B?
 
-ShanghaiTech Part A yoğun kalabalıklar, Part B seyrek sahneler için eğitilmiştir.
-Otobüs içi orta yoğunluktadır ve ölçüldüğünde fark belirgindir — düz gri karede:
+Part A yoğun kalabalıklar, Part B seyrek sahneler için eğitilmiştir. Otobüs içi
+orta yoğunluktadır ve fark ölçüldüğünde belirgindir — düz gri karede:
 
 | Ağırlık | Tahmin | MAE |
 |---|---|---|

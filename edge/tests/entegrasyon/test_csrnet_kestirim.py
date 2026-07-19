@@ -19,7 +19,8 @@ import numpy as np  # noqa: E402
 
 from app.csrnet_kestirim import CsrnetKestirici  # noqa: E402
 
-AGIRLIK_YOLU = Path(__file__).resolve().parents[2] / "model" / "partBmodel_best.pth.tar"
+# tests/entegrasyon/x.py -> edge/ -> depo kökü; model/ kökte durur.
+AGIRLIK_YOLU = Path(__file__).resolve().parents[3] / "model" / "csrnet_partB.pth"
 # Part B düz karede 0.13 veriyor; Part A 7.33. Eşik ikisini ayırt eder.
 BOS_SAHNE_UST_SINIRI = 2
 

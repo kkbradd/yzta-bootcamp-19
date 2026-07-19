@@ -59,7 +59,7 @@ def test_csrnet_agirliksiz_reddedilir(monkeypatch, tmp_path):
 def test_csrnet_tam_yapilandirmayla_gecer(monkeypatch, tmp_path):
     video = tmp_path / "otobus.mp4"
     video.write_bytes(b"sahte")
-    agirlik = tmp_path / "partBmodel_best.pth.tar"
+    agirlik = tmp_path / "csrnet_partB.pth"
     agirlik.write_bytes(b"sahte")
     monkeypatch.setenv("EDGE_MOTOR", CSRNET_MOTORU)
     monkeypatch.setenv("EDGE_VIDEO_YOLU", str(video))
