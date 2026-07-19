@@ -1,2 +1,9 @@
 # Docker Compose'un kökten okuduğu değişkenler (GEMINI_API_KEY gibi gizli anahtarlar).
 .env
+
+# CSRNet ağırlığı (~124 MB) ve edge videoları depoya girmez.
+# Nasıl edinilecekleri model/README.md ve edge/README.md'de yazılıdır.
+model/*.pth.tar
+model/*.pth
+edge/videolar/*
+!edge/videolar/.gitkeep

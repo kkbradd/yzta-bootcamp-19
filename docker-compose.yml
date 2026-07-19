@@ -25,6 +25,11 @@ services:
       POSTGRES_USER: hat01
       POSTGRES_PASSWORD: hat01
       POSTGRES_DB: hat01
+    # Veri adlandırılmış volume'da kalır; yoksa her `compose down` ölçüm geçmişini
+    # silerdi. Bu değişiklikten sonraki ilk açılış boş veritabanıyla başlar,
+    # `seed` idempotent olduğu için tohum kendiliğinden yeniden yüklenir.
+    volumes:
+      - postgres_verisi:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hat01 -d hat01"]
       interval: 3s
@@ -131,5 +136,39 @@ services:
       seed:
         condition: service_completed_successfully
 
+  # Gerçek veri akışı (gercek profili): videodan CSRNet ile kişi sayıp yayınlar.
+  #
+  #   docker compose --profile gercek up --build
+  #
+  # DİKKAT: simulator ile aynı anda çalıştırmayın. İkisi de edge_0001 adına yayın
+  # yapar ve sira_no'yu aynı saat tohumundan üretir; çakışan ölçümler backend'de
+  # UNIQUE(cihaz_id, sira_no) nedeniyle sessizce yutulur. Profiller ayrı olduğu
+  # için varsayılan kullanımda bu mümkün değildir.
+  #
+  # Kurulum (bkz. edge/README.md ve model/README.md):
+  #   1. Videoyu edge/videolar/ altına koyun, EDGE_VIDEO_YOLU'nu buna göre ayarlayın
+  #   2. CSRNet ağırlığını model/ altına indirin
+  # Model yoksa EDGE_MOTOR=sahte ile boru hattı modelsiz denenebilir.
+  edge:
+    build: ./edge
+    profiles: ["gercek"]
+    environment:
+      EDGE_MOTOR: ${EDGE_MOTOR:-csrnet}
+      EDGE_BROKER: mosquitto
+      EDGE_VIDEO_YOLU: ${EDGE_VIDEO_YOLU:-/uygulama/videolar/otobus.mp4}
+      EDGE_AGIRLIK_YOLU: /uygulama/model/partBmodel_best.pth.tar
+      # Otobüs içi görüntüsü modelin eğitim dağılımı dışında; ham sayımı
+      # gerçeğe oturtmak için elle kalibre edilir (ham değer de loglanır).
+      EDGE_SAYIM_CARPANI: ${EDGE_SAYIM_CARPANI:-1.0}
+    volumes:
+      - ./edge/videolar:/uygulama/videolar:ro
+      - ./model:/uygulama/model:ro
+    depends_on:
+      mosquitto:
+        condition: service_started
+      seed:
+        condition: service_completed_successfully
+
 volumes:
   ollama_modelleri:
+  postgres_verisi:

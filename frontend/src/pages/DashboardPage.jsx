@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useClock } from '../hooks/useClock'
+import { useCanliVeri } from '../hooks/useCanliVeri'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
@@ -40,6 +41,25 @@ const formatXAxis = (index, range) => {
   return `${index + 1}. Gün`
 }
 
+// Canlı ölçümü olmayan alanlar tasarımdaki sabit değerlerini korur; '—' yerine
+// mock göstermek yanıltıcı olurdu ama tüm kartları canlıya bağlamak da kapsam dışı.
+const VERI_YOK = '—'
+
+function ortalamaDolulukYuzdesi(araclar) {
+  const oranlar = Object.values(araclar).map((a) => a.doluluk_orani).filter((o) => o != null)
+  if (oranlar.length === 0) return VERI_YOK
+  const ortalama = oranlar.reduce((toplam, oran) => toplam + oran, 0) / oranlar.length
+  return `%${Math.round(ortalama * 100)}`
+}
+
+function yogunAracSayisi(araclar) {
+  return Object.values(araclar).filter((a) => a.seviye === 'yogun').length
+}
+
+function cevrimdisiCihazSayisi(cihazlar) {
+  return Object.values(cihazlar).filter((c) => c.cevrimici === false).length
+}
+
 const CustomTooltip = ({ active, payload, label, range }) => {
   if (active && payload && payload.length) {
     return (
@@ -58,12 +78,18 @@ const CustomTooltip = ({ active, payload, label, range }) => {
 
 export default function DashboardPage({ onNavigate }) {
   const time = useClock()
+  const { araclar, cihazlar, bagli } = useCanliVeri()
   const [selectedRange, setSelectedRange] = useState('24h')
   const [selectedRoute, setSelectedRoute] = useState('all')
 
   const currentRange = timeRanges.find(r => r.value === selectedRange)
   const data = generateData(currentRange.points, currentRange.multiplier)
   const totalPassengers = data.reduce((sum, d) => sum + d.value, 0)
+
+  const olcumVar = Object.keys(araclar).length > 0
+  const ortDoluluk = ortalamaDolulukYuzdesi(araclar)
+  const yogunSayisi = olcumVar ? String(yogunAracSayisi(araclar)) : VERI_YOK
+  const cevrimdisiSayisi = cevrimdisiCihazSayisi(cihazlar)
 
   return (
     <div style={styles.root}>
@@ -109,19 +135,19 @@ export default function DashboardPage({ onNavigate }) {
         <header style={styles.topbar}>
           <div style={styles.topbarLeft}>
             <div style={styles.statusBadge}>
-              <span style={styles.statusDot} />
-              Sistem Aktif
+              <span style={{ ...styles.statusDot, ...(bagli ? {} : styles.statusDotKopuk) }} />
+              {bagli ? 'Canlı Bağlantı' : 'Bağlantı Yok'}
             </div>
             <div style={styles.topbarDivider} />
             <div style={styles.topbarMeta}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
-              142 Aktif Hat
+              {olcumVar ? `${Object.keys(araclar).length} Ölçen Araç` : 'Ölçüm bekleniyor'}
             </div>
             <div style={styles.topbarMeta}>
               <span style={{ color: '#f59e0b' }}>⚠</span>
-              3 Çevrim Dışı
+              {cevrimdisiSayisi} Çevrim Dışı
             </div>
           </div>
           <div style={styles.topbarRight}>
@@ -139,9 +165,9 @@ export default function DashboardPage({ onNavigate }) {
             {[
               { label: 'TOPLAM HAT', value: '142', change: '+2%', icon: '✈', color: '#3b82f6' },
               { label: 'AKTİF HAT', value: '138', change: '-%0.5', icon: '⊟', color: '#10b981' },
-              { label: 'YOĞUN HAT', value: '12', change: '+12%', icon: '👥', color: '#8b5cf6' },
+              { label: 'YOĞUN ARAÇ', value: yogunSayisi, change: 'Canlı', icon: '👥', color: '#8b5cf6' },
               { label: 'YOĞUN DURAK', value: '45', change: '+5%', icon: '📍', color: '#f59e0b' },
-              { label: 'ORT. DOLULUK', value: '%64', change: '-3%', icon: '📉', color: '#ef4444' },
+              { label: 'ORT. DOLULUK', value: ortDoluluk, change: 'Canlı', icon: '📉', color: '#ef4444' },
               { label: 'AKTİF ALARM', value: '3', change: 'Kritik', icon: '⏰', color: '#ef4444', critical: true },
             ].map(kpi => (
               <div key={kpi.label} style={styles.kpiCard}>
@@ -359,6 +385,7 @@ const styles = {
     width: '8px', height: '8px', borderRadius: '50%', background: '#10b981',
     display: 'inline-block', boxShadow: '0 0 0 2px #d1fae5',
   },
+  statusDotKopuk: { background: '#9ca3af', boxShadow: '0 0 0 2px #f3f4f6' },
   topbarDivider: { width: '1px', height: '16px', background: '#e5e7eb' },
   topbarMeta: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#6b7280' },
   avatar: {
