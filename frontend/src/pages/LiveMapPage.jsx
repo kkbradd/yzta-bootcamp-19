@@ -1,7 +1,65 @@
+import { useEffect, useState } from 'react'
+import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { useClock } from '../hooks/useClock'
+import { useCanliYayin } from '../hooks/useCanliYayin'
+import { duraklariGetir } from '../api/duraklar'
+import { hatlariGetir } from '../api/hatlar'
+import { hatGuzergahiniGetir } from '../api/guzergahlar'
+
+// Vite'da Leaflet'in varsayılan marker ikonları otomatik yüklenmez — CDN'den elle ayarlanır.
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
+
+const USKUDAR_MERKEZ = [41.023, 29.015]
+
+const aracIkonu = new L.DivIcon({
+  className: 'arac-ikonu',
+  html: '<div style="width:14px;height:14px;border-radius:50%;background:#111827;border:2px solid #fff;box-shadow:0 0 0 2px #111827;"></div>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+})
+
+const HAT_RENKLERI = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
 
 export default function LiveMapPage({ onNavigate }) {
   const time = useClock()
+  const [duraklar, setDuraklar] = useState([])
+  const [guzergahlar, setGuzergahlar] = useState([]) // [{ hatId, code, koordinatlar, renk }]
+  const [hatKodlari, setHatKodlari] = useState({}) // { [hat_id]: '15A' }
+  const { aracKonumlari } = useCanliYayin()
+
+  useEffect(() => {
+    duraklariGetir().then(setDuraklar).catch(() => setDuraklar([]))
+
+    hatlariGetir()
+      .then(async (hatlar) => {
+        setHatKodlari(Object.fromEntries(hatlar.map((h) => [h.hat_id, h.code])))
+        const sonuclar = await Promise.all(
+          hatlar.map(async (hat, i) => {
+            try {
+              const guzergah = await hatGuzergahiniGetir(hat.hat_id)
+              return {
+                hatId: hat.hat_id,
+                code: hat.code,
+                koordinatlar: guzergah.koordinatlar,
+                renk: HAT_RENKLERI[i % HAT_RENKLERI.length],
+              }
+            } catch {
+              return null
+            }
+          })
+        )
+        setGuzergahlar(sonuclar.filter(Boolean))
+      })
+      .catch(() => setGuzergahlar([]))
+  }, [])
+
   return (
     <div style={s.root}>
       {/* Sidebar */}
@@ -75,7 +133,6 @@ export default function LiveMapPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Map placeholder */}
         <div style={s.content}>
           <div style={s.mapCard}>
             <div style={s.cardHeader}>
@@ -84,11 +141,30 @@ export default function LiveMapPage({ onNavigate }) {
                 <div style={s.cardSubtitle}>Gerçek zamanlı araç doluluk oranları ve durak durumu</div>
               </div>
             </div>
-            <div style={s.mapPlaceholder}>
-              <div style={s.mapPlaceholderIcon}>🗺</div>
-              <div style={s.mapPlaceholderText}>Harita görünümü</div>
-              <div style={s.mapPlaceholderSub}>Gerçek zamanlı harita entegrasyonu yakında</div>
-            </div>
+            <MapContainer center={USKUDAR_MERKEZ} zoom={13} style={{ flex: 1, minHeight: 0, width: '100%', borderRadius: '8px' }}>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              />
+
+              {guzergahlar.map((g) => (
+                g.koordinatlar.length > 0 && (
+                  <Polyline key={g.hatId} positions={g.koordinatlar} color={g.renk} weight={4} opacity={0.7} />
+                )
+              ))}
+
+              {duraklar.map((d) => (
+                <Marker key={d.id} position={[d.enlem, d.boylam]}>
+                  <Popup>{d.ad}</Popup>
+                </Marker>
+              ))}
+
+              {Object.entries(aracKonumlari).map(([aracId, konum]) => (
+                <Marker key={aracId} position={[konum.enlem, konum.boylam]} icon={aracIkonu}>
+                  <Popup>Araç #{aracId} — Hat {hatKodlari[konum.hat_id] ?? konum.hat_id}</Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
         </div>
 
@@ -125,15 +201,11 @@ const s = {
   topbarDivider: { width: '1px', height: '16px', background: '#e5e7eb' },
   topbarMeta: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#6b7280' },
   avatar: { width: '34px', height: '34px', borderRadius: '50%', background: '#111827', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '600' },
-  content: { flex: 1, overflow: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
-  mapCard: { flex: 1, background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' },
+  content: { flex: 1, overflow: 'hidden', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
+  mapCard: { flex: 1, minHeight: 0, background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexShrink: 0 },
   cardTitle: { fontSize: '14px', fontWeight: '700', color: '#111827' },
   cardSubtitle: { fontSize: '12px', color: '#9ca3af', marginTop: '2px' },
-  mapPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '340px', border: '1.5px dashed #e5e7eb', borderRadius: '8px', gap: '8px' },
-  mapPlaceholderIcon: { fontSize: '32px', opacity: 0.3 },
-  mapPlaceholderText: { fontSize: '14px', fontWeight: '500', color: '#9ca3af' },
-  mapPlaceholderSub: { fontSize: '12px', color: '#d1d5db' },
   footer: { padding: '12px 24px', borderTop: '1px solid #e5e7eb', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#9ca3af', flexShrink: 0 },
   footerLink: { color: '#9ca3af', textDecoration: 'none' },
 }

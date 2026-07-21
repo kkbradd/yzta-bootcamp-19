@@ -36,6 +36,26 @@ class Durak:
 
 
 @dataclass(frozen=True, slots=True)
+class HatDuragi:
+    """Bir hattın sıralı durak listesindeki tek satır (many-to-many + sıra)."""
+
+    id: int
+    hat_id: int
+    durak_id: int
+    sira: int
+
+
+@dataclass(frozen=True, slots=True)
+class Guzergah:
+    """Bir hattın OSRM'den üretilmiş yol geometrisi (tek seferlik hesaplanır)."""
+
+    hat_id: int
+    koordinatlar: list[tuple[float, float]]  # [(enlem, boylam), ...]
+    mesafe_metre: float
+    sure_saniye: float
+
+
+@dataclass(frozen=True, slots=True)
 class Cihaz:
     id: str
     tip: str  # CIHAZ_TIPLERI'nden biri

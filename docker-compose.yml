@@ -66,7 +66,7 @@ services:
       ollama:
         condition: service_healthy
 
-  # Tek seferlik tohum: 3 hat, 5 araç, cihazlar ve atamalar (idempotent).
+  # Tek seferlik tohum: 10 hat, 15 durak, araçlar, cihazlar ve atamalar (idempotent).
   seed:
     build: ./backend
     command: python -m app.seed
@@ -76,6 +76,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Tek seferlik güzergah hazırlama: OSRM ile her hat için yol polyline'ı üretir
+  # (idempotent — zaten üretilmiş hatları atlar). seed'den sonra çalışır.
+  guzergah_hazirla:
+    build: ./backend
+    command: python -m app.guzergah_hazirla
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+    restart: "no"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
 
   ollama:
     image: ollama/ollama:latest

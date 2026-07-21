@@ -38,6 +38,21 @@ class OlcumYaniti(BaseModel):
     olcum_zamani: datetime
 
 
+class DurakYaniti(BaseModel):
+    id: int
+    ad: str
+    enlem: float
+    boylam: float
+    hat_kodlari: list[str] = []
+
+
+class HatGuzergahYaniti(BaseModel):
+    duraklar: list[DurakYaniti]
+    koordinatlar: list[tuple[float, float]]
+    mesafe_metre: float | None
+    sure_saniye: float | None
+
+
 class CihazYaniti(BaseModel):
     id: str
     tip: str

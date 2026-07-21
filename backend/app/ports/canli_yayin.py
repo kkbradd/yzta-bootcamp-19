@@ -12,3 +12,7 @@ class CanliYayinPort(Protocol):
     async def cihaz_durumunu_yayinla(
         self, cihaz_id: str, cevrimici: bool, son_gorulme: datetime | None
     ) -> None: ...
+
+    async def arac_konumunu_yayinla(
+        self, arac_id: int, hat_id: int, enlem: float, boylam: float
+    ) -> None: ...
