@@ -65,6 +65,8 @@ services:
         condition: service_started
       ollama:
         condition: service_healthy
+      gecmis_veri_yukle:
+        condition: service_completed_successfully
 
   # Tek seferlik tohum: 10 hat, 15 durak, araçlar, cihazlar ve atamalar (idempotent).
   seed:
@@ -82,6 +84,20 @@ services:
   guzergah_hazirla:
     build: ./backend
     command: python -m app.guzergah_hazirla
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+    restart: "no"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  # Tek seferlik geçmiş veri yükleme: 30 günlük gerçekçi yoğunluk ölçümü üretir
+  # (idempotent — geçmiş veri zaten varsa atlanır). AI öneri motorunun ve
+  # Dashboard trend grafiğinin anlamlı veriyle çalışması için backend'den önce
+  # tamamlanmalı (backend açılışta hemen öneri üretimini tetikliyor).
+  gecmis_veri_yukle:
+    build: ./backend
+    command: python -m app.gecmis_veri_yukle
     environment:
       DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
     restart: "no"

@@ -172,6 +172,15 @@ class PostgresSorgular:
             satirlar = (await oturum.scalars(ifade)).all()
         return [Durak(id=s.id, ad=s.ad, enlem=s.enlem, boylam=s.boylam) for s in satirlar]
 
+    async def hat_durak_sayilarini_listele(self) -> dict[int, int]:
+        """Her hat_id için durak sayısını döner (LinesPage 'DURAK SAYISI' kartı için)."""
+        ifade = select(HatDuraklariTablosu.hat_id, func.count()).group_by(
+            HatDuraklariTablosu.hat_id
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.execute(ifade)).all()
+        return dict(satirlar)
+
     async def hat_guzergahini_getir(self, hat_id: int) -> Guzergah | None:
         async with self._oturum_fabrikasi() as oturum:
             satir = await oturum.get(GuzergahTablosu, hat_id)

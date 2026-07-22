@@ -13,6 +13,7 @@ class HatOzeti(BaseModel):
     ortalama_doluluk: float | None
     seviye: str | None
     arac_sayisi: int
+    durak_sayisi: int = 0
 
 
 class AracAnlikDurumu(BaseModel):

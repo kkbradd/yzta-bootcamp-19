@@ -1,64 +1,8 @@
-import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import { useClock } from '../hooks/useClock'
-import { useCanliYayin } from '../hooks/useCanliYayin'
-import { duraklariGetir } from '../api/duraklar'
-import { hatlariGetir } from '../api/hatlar'
-import { hatGuzergahiniGetir } from '../api/guzergahlar'
-
-// Vite'da Leaflet'in varsayılan marker ikonları otomatik yüklenmez — CDN'den elle ayarlanır.
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-const USKUDAR_MERKEZ = [41.023, 29.015]
-
-const aracIkonu = new L.DivIcon({
-  className: 'arac-ikonu',
-  html: '<div style="width:14px;height:14px;border-radius:50%;background:#111827;border:2px solid #fff;box-shadow:0 0 0 2px #111827;"></div>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-})
-
-const HAT_RENKLERI = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
+import CanliHarita from '../components/CanliHarita'
 
 export default function LiveMapPage({ onNavigate }) {
   const time = useClock()
-  const [duraklar, setDuraklar] = useState([])
-  const [guzergahlar, setGuzergahlar] = useState([]) // [{ hatId, code, koordinatlar, renk }]
-  const [hatKodlari, setHatKodlari] = useState({}) // { [hat_id]: '15A' }
-  const { aracKonumlari } = useCanliYayin()
-
-  useEffect(() => {
-    duraklariGetir().then(setDuraklar).catch(() => setDuraklar([]))
-
-    hatlariGetir()
-      .then(async (hatlar) => {
-        setHatKodlari(Object.fromEntries(hatlar.map((h) => [h.hat_id, h.code])))
-        const sonuclar = await Promise.all(
-          hatlar.map(async (hat, i) => {
-            try {
-              const guzergah = await hatGuzergahiniGetir(hat.hat_id)
-              return {
-                hatId: hat.hat_id,
-                code: hat.code,
-                koordinatlar: guzergah.koordinatlar,
-                renk: HAT_RENKLERI[i % HAT_RENKLERI.length],
-              }
-            } catch {
-              return null
-            }
-          })
-        )
-        setGuzergahlar(sonuclar.filter(Boolean))
-      })
-      .catch(() => setGuzergahlar([]))
-  }, [])
 
   return (
     <div style={s.root}>
@@ -141,30 +85,9 @@ export default function LiveMapPage({ onNavigate }) {
                 <div style={s.cardSubtitle}>Gerçek zamanlı araç doluluk oranları ve durak durumu</div>
               </div>
             </div>
-            <MapContainer center={USKUDAR_MERKEZ} zoom={13} style={{ flex: 1, minHeight: 0, width: '100%', borderRadius: '8px' }}>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              />
-
-              {guzergahlar.map((g) => (
-                g.koordinatlar.length > 0 && (
-                  <Polyline key={g.hatId} positions={g.koordinatlar} color={g.renk} weight={4} opacity={0.7} />
-                )
-              ))}
-
-              {duraklar.map((d) => (
-                <Marker key={d.id} position={[d.enlem, d.boylam]}>
-                  <Popup>{d.ad}</Popup>
-                </Marker>
-              ))}
-
-              {Object.entries(aracKonumlari).map(([aracId, konum]) => (
-                <Marker key={aracId} position={[konum.enlem, konum.boylam]} icon={aracIkonu}>
-                  <Popup>Araç #{aracId} — Hat {hatKodlari[konum.hat_id] ?? konum.hat_id}</Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <CanliHarita />
+            </div>
           </div>
         </div>
 

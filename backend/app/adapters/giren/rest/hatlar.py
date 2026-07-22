@@ -33,6 +33,7 @@ Esikler = Annotated[SeviyeEsikleri, Depends(esikleri_getir)]
 async def hatlari_listele(
     anlik: AnlikDurum, sorgular: Sorgular, esikler: Esikler
 ) -> list[HatOzeti]:
+    durak_sayilari = await sorgular.hat_durak_sayilarini_listele()
     ozetler = []
     for hat in await sorgular.hatlari_listele():
         ortalama, arac_sayisi = await anlik.hat_ozeti(hat.id)
@@ -48,6 +49,7 @@ async def hatlari_listele(
                     else None
                 ),
                 arac_sayisi=arac_sayisi,
+                durak_sayisi=durak_sayilari.get(hat.id, 0),
             )
         )
     return ozetler
