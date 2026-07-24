@@ -16,15 +16,24 @@ function araligiCoz(rangeValue) {
   return { baslangic: baslangic.toISOString(), bitis: bitis.toISOString(), aralik: eslesme.aralik }
 }
 
-// GET /api/hatlar/{hat_id}/trend -> tek hat trend noktaları.
+// GET /api/hatlar/{hat_id}/trend -> tek hat trend noktaları. toplam_kisi,
+// backend'in döndürdüğü ortalama_kisi × olcum_sayisi'dir — kovadaki tüm
+// ölçümlerin toplamı (grafik ve "Toplam" etiketi bu alanı kullanır, ikisi
+// aynı birimde olsun diye; ortalama_kisi tek başına "bir ölçümdeki ortalama
+// kişi sayısı" anlamına geldiği için doğrudan toplanamaz).
 async function tekHatTrendi(hatId, rangeValue) {
   const { baslangic, bitis, aralik } = araligiCoz(rangeValue)
   const q = new URLSearchParams({ baslangic, bitis, aralik })
-  return apiGet(`/api/hatlar/${hatId}/trend?${q.toString()}`)
+  const noktalar = await apiGet(`/api/hatlar/${hatId}/trend?${q.toString()}`)
+  return noktalar.map((n) => ({
+    ...n,
+    toplam_kisi: n.ortalama_kisi * n.olcum_sayisi,
+  }))
 }
 
 // "Tüm Hatlar": backend'de agregasyon endpoint'i yok — N hat için paralel
-// fetch + zaman kovalarına göre (olcum_sayisi ağırlıklı) toplama.
+// fetch + zaman kovalarına göre toplama (toplam_kisi doğrudan toplanır,
+// ortalama_doluluk olcum_sayisi ağırlıklı ortalama kalır).
 export async function trendGetir(hatId, rangeValue, tumHatlar = []) {
   if (hatId && hatId !== 'all') {
     return tekHatTrendi(hatId, rangeValue)
@@ -34,11 +43,11 @@ export async function trendGetir(hatId, rangeValue, tumHatlar = []) {
   const sonuclar = await Promise.all(
     tumHatlar.map((h) => tekHatTrendi(h.hat_id, rangeValue))
   )
-  const kovaMap = new Map() // zaman ISO -> { kisi, doluluk, doluluk_n, olcum }
+  const kovaMap = new Map() // zaman ISO -> { toplamKisi, doluluk, doluluk_n, olcum }
   for (const noktalar of sonuclar) {
     for (const n of noktalar) {
-      const mevcut = kovaMap.get(n.zaman) ?? { kisi: 0, doluluk: 0, doluluk_n: 0, olcum: 0 }
-      mevcut.kisi += n.ortalama_kisi * n.olcum_sayisi
+      const mevcut = kovaMap.get(n.zaman) ?? { toplamKisi: 0, doluluk: 0, doluluk_n: 0, olcum: 0 }
+      mevcut.toplamKisi += n.toplam_kisi
       if (n.ortalama_doluluk != null) {
         mevcut.doluluk += n.ortalama_doluluk * n.olcum_sayisi
         mevcut.doluluk_n += n.olcum_sayisi
@@ -51,7 +60,7 @@ export async function trendGetir(hatId, rangeValue, tumHatlar = []) {
     .sort(([a], [b]) => new Date(a) - new Date(b))
     .map(([zaman, v]) => ({
       zaman,
-      ortalama_kisi: v.olcum ? v.kisi / v.olcum : 0,
+      toplam_kisi: v.toplamKisi,
       ortalama_doluluk: v.doluluk_n ? v.doluluk / v.doluluk_n : null,
       olcum_sayisi: v.olcum,
     }))

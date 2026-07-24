@@ -15,7 +15,7 @@ const generateData = (points, multiplier = 1) => {
     8500, 9100, 8800, 8200, 9500, 9800, 8600, 7200, 5800, 4200, 2800, 1400]
   return Array.from({ length: points }, (_, i) => ({
     zaman: i,
-    ortalama_kisi: Math.round((base[i % base.length] + Math.random() * 300) * multiplier)
+    toplam_kisi: Math.round((base[i % base.length] + Math.random() * 300) * multiplier)
   }))
 }
 
@@ -108,12 +108,11 @@ export default function DashboardPage({ onNavigate }) {
 
   const routes = [{ label: 'Tüm Hatlar', value: 'all' }, ...hatlar.map((h) => ({ label: h.code, value: String(h.hat_id) }))]
   const data = trendVerisi
-  // Her nokta bir zaman kovasının ORTALAMASI — gerçek toplam yolcu sayısı için
-  // olcum_sayisi ağırlıklı toplama gerekir (aksi halde 15dk/saat/gün aralıkları
-  // arasında kova başına farklı ölçüm sayısı yüzünden toplamlar tutarsız çıkar).
-  const totalPassengers = Math.round(
-    data.reduce((sum, d) => sum + d.ortalama_kisi * (d.olcum_sayisi ?? 1), 0)
-  )
+  // Grafik ve "Toplam" aynı birimde: her nokta o zaman kovasındaki TOPLAM
+  // yolcu sayısı (toplam_kisi = ortalama_kisi × olcum_sayisi, api/trend.js'te
+  // hesaplanır). Toplam, noktaların basit toplamı — ekstra ağırlıklandırma
+  // gerekmez çünkü toplam_kisi zaten kova başına gerçek toplamdır.
+  const totalPassengers = Math.round(data.reduce((sum, d) => sum + d.toplam_kisi, 0))
 
   return (
     <div style={styles.root}>
@@ -347,7 +346,7 @@ export default function DashboardPage({ onNavigate }) {
                 <Tooltip content={<CustomTooltip range={selectedRange} />} />
                 <Area
                   type="monotone"
-                  dataKey="ortalama_kisi"
+                  dataKey="toplam_kisi"
                   stroke="#111827"
                   strokeWidth={2}
                   fill="url(#passengerGradient)"
