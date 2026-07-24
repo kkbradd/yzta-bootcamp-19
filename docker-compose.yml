@@ -52,7 +52,10 @@ services:
       # GEMINI_API_KEY yaz — DİKKAT: o modda yoğunluk verisi Google'a gider.
       AI_MOTOR: ${AI_MOTOR:-local}
       OLLAMA_ADRESI: http://ollama:11434
-      YEREL_MODEL: ${YEREL_MODEL:-alibayram/turkish-gemma-9b-v0.1:latest}
+      # Küçük/hızlı model: turkish-gemma-9b CPU'da öneri üretimini tıkıyordu
+      # (yüksek CPU + event loop bloklaması). Asistan sohbeti ayrı servis,
+      # kendi ASISTAN_MODEL'ini kullanmaya devam ediyor, buradan etkilenmez.
+      YEREL_MODEL: ${YEREL_MODEL:-qwen3.5:0.8b}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - "8000:8000"
@@ -65,8 +68,10 @@ services:
         condition: service_started
       ollama:
         condition: service_healthy
+      gecmis_veri_yukle:
+        condition: service_completed_successfully
 
-  # Tek seferlik tohum: 3 hat, 5 araç, cihazlar ve atamalar (idempotent).
+  # Tek seferlik tohum: 10 hat, 15 durak, araçlar, cihazlar ve atamalar (idempotent).
   seed:
     build: ./backend
     command: python -m app.seed
@@ -76,6 +81,32 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Tek seferlik güzergah hazırlama: OSRM ile her hat için yol polyline'ı üretir
+  # (idempotent — zaten üretilmiş hatları atlar). seed'den sonra çalışır.
+  guzergah_hazirla:
+    build: ./backend
+    command: python -m app.guzergah_hazirla
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+    restart: "no"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  # Tek seferlik geçmiş veri yükleme: 30 günlük gerçekçi yoğunluk ölçümü üretir
+  # (idempotent — geçmiş veri zaten varsa atlanır). AI öneri motorunun ve
+  # Dashboard trend grafiğinin anlamlı veriyle çalışması için backend'den önce
+  # tamamlanmalı (backend açılışta hemen öneri üretimini tetikliyor).
+  gecmis_veri_yukle:
+    build: ./backend
+    command: python -m app.gecmis_veri_yukle
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+    restart: "no"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
 
   ollama:
     image: ollama/ollama:latest

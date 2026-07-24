@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useClock } from '../hooks/useClock'
 import { hatlariGetir } from '../api/hatlar'
 import { API_TABANI } from '../api/client'
+import HatDetayModal from '../components/HatDetayModal'
 
 // Mock veri — SİLİNMEDİ; backend'e ulaşılamazsa yedek (demo) olarak kullanılır.
 const lines = [
@@ -22,7 +23,7 @@ const statusConfig = {
 
 // Mock 'lines' -> kart şekli (backend başarısız olursa yedek olarak render edilir).
 const DEMO_HATLAR = lines.map((l) => ({
-  hat_id: l.code, code: l.code, route: l.route, buses: l.buses, durum: l.status,
+  hat_id: l.code, code: l.code, route: l.route, buses: l.buses, stops: l.stops, durum: l.status,
 }))
 
 export default function LinesPage({ onNavigate }) {
@@ -30,6 +31,7 @@ export default function LinesPage({ onNavigate }) {
   const [search, setSearch] = useState('')
   const [hatlar, setHatlar] = useState([])
   const [asama, setAsama] = useState('yukleniyor') // 'yukleniyor' | 'hazir' | 'demo'
+  const [secilenHat, setSecilenHat] = useState(null)
 
   useEffect(() => {
     let iptal = false
@@ -190,7 +192,7 @@ export default function LinesPage({ onNavigate }) {
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
                           </svg>
-                          —
+                          {line.stops ?? '—'}
                         </div>
                       </div>
                       <div>
@@ -207,7 +209,7 @@ export default function LinesPage({ onNavigate }) {
 
                     <div style={s.cardDivider} />
 
-                    <div style={s.cardFooter}>
+                    <div style={s.cardFooter} onClick={() => setSecilenHat(line)}>
                       <span style={s.detailLink}>Detayları Görüntüle</span>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
                         <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
@@ -229,6 +231,10 @@ export default function LinesPage({ onNavigate }) {
           </div>
         </footer>
       </div>
+
+      {secilenHat && (
+        <HatDetayModal hat={secilenHat} onClose={() => setSecilenHat(null)} />
+      )}
     </div>
   )
 }
@@ -276,7 +282,7 @@ const s = {
   stats: { display: 'flex', gap: '32px' },
   statLabel: { fontSize: '10px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '4px' },
   statValue: { display: 'flex', alignItems: 'center', gap: '5px', fontSize: '15px', fontWeight: '600', color: '#111827' },
-  cardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  cardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
   detailLink: { fontSize: '13px', color: '#374151', fontWeight: '500' },
   footer: { padding: '12px 24px', borderTop: '1px solid #e5e7eb', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#9ca3af', flexShrink: 0 },
   footerLink: { color: '#9ca3af', textDecoration: 'none' },

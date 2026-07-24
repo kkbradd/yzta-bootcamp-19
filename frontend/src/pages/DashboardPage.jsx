@@ -4,13 +4,18 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 import { onerileriGetir, uyarilariGetir } from '../api/oneriler'
+import { hatlariGetir } from '../api/hatlar'
+import { trendGetir } from '../api/trend'
+import { API_TABANI } from '../api/client'
+import CanliHarita from '../components/CanliHarita'
 
+// Mock veri — SİLİNMEDİ; backend'e ulaşılamazsa yedek (demo) olarak kullanılır.
 const generateData = (points, multiplier = 1) => {
   const base = [800, 600, 500, 450, 420, 500, 1200, 3500, 6800, 8200, 7900, 7200,
     8500, 9100, 8800, 8200, 9500, 9800, 8600, 7200, 5800, 4200, 2800, 1400]
   return Array.from({ length: points }, (_, i) => ({
-    time: i,
-    value: Math.round((base[i % base.length] + Math.random() * 300) * multiplier)
+    zaman: i,
+    toplam_kisi: Math.round((base[i % base.length] + Math.random() * 300) * multiplier)
   }))
 }
 
@@ -22,23 +27,13 @@ const timeRanges = [
   { label: '30 Gün', value: '30d', points: 30, multiplier: 1.2 },
 ]
 
-const routes = [
-  { label: 'Tüm Hatlar', value: 'all' },
-  { label: 'Hat 1', value: '1' },
-  { label: 'Hat 2', value: '2' },
-  { label: 'Hat 3', value: '3' },
-  { label: 'Hat 5', value: '5' },
-  { label: 'Hat 12', value: '12' },
-  { label: 'Hat 34', value: '34' },
-]
-
-const formatXAxis = (index, range) => {
+const formatXAxis = (zaman, range) => {
+  if (typeof zaman === 'number') return zaman // demo fallback (index bazlı)
+  const tarih = new Date(zaman)
   if (range === '12h' || range === '24h') {
-    return `${String(index).padStart(2, '0')}:00`
+    return tarih.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
   }
-  if (range === '3d') return `Gün ${Math.floor(index / 12) + 1}`
-  if (range === '7d') return `Gün ${Math.floor(index / 6) + 1}`
-  return `${index + 1}. Gün`
+  return tarih.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' })
 }
 
 const CustomTooltip = ({ active, payload, label, range }) => {
@@ -49,7 +44,7 @@ const CustomTooltip = ({ active, payload, label, range }) => {
           {formatXAxis(label, range)}
         </div>
         <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>
-          {payload[0].value.toLocaleString('tr-TR')} Yolcu
+          {Math.round(payload[0].value).toLocaleString('tr-TR')} Yolcu
         </div>
       </div>
     )
@@ -75,6 +70,9 @@ export default function DashboardPage({ onNavigate }) {
   const [selectedRoute, setSelectedRoute] = useState('all')
   const [uyarilar, setUyarilar] = useState(DEMO_UYARILAR)
   const [oneriler, setOneriler] = useState(DEMO_ONERILER)
+  const [hatlar, setHatlar] = useState([])
+  const [trendVerisi, setTrendVerisi] = useState([])
+  const [trendAsama, setTrendAsama] = useState('yukleniyor') // 'yukleniyor' | 'hazir' | 'demo'
 
   useEffect(() => {
     let iptal = false
@@ -84,12 +82,37 @@ export default function DashboardPage({ onNavigate }) {
     onerileriGetir()
       .then((veri) => { if (!iptal) setOneriler(veri) })
       .catch(() => { if (!iptal) setOneriler(DEMO_ONERILER) })
+    hatlariGetir()
+      .then((veri) => { if (!iptal) setHatlar(veri) })
+      .catch(() => { if (!iptal) setHatlar([]) })
     return () => { iptal = true }
   }, [])
 
   const currentRange = timeRanges.find(r => r.value === selectedRange)
-  const data = generateData(currentRange.points, currentRange.multiplier)
-  const totalPassengers = data.reduce((sum, d) => sum + d.value, 0)
+
+  useEffect(() => {
+    if (selectedRoute === 'all' && hatlar.length === 0) return
+    let iptal = false
+    setTrendAsama('yukleniyor')
+    trendGetir(selectedRoute, selectedRange, hatlar)
+      .then((veri) => { if (!iptal) { setTrendVerisi(veri); setTrendAsama('hazir') } })
+      .catch(() => {
+        if (!iptal) {
+          setTrendVerisi(generateData(currentRange.points, currentRange.multiplier))
+          setTrendAsama('demo')
+        }
+      })
+    return () => { iptal = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRoute, selectedRange, hatlar])
+
+  const routes = [{ label: 'Tüm Hatlar', value: 'all' }, ...hatlar.map((h) => ({ label: h.code, value: String(h.hat_id) }))]
+  const data = trendVerisi
+  // Grafik ve "Toplam" aynı birimde: her nokta o zaman kovasındaki TOPLAM
+  // yolcu sayısı (toplam_kisi = ortalama_kisi × olcum_sayisi, api/trend.js'te
+  // hesaplanır). Toplam, noktaların basit toplamı — ekstra ağırlıklandırma
+  // gerekmez çünkü toplam_kisi zaten kova başına gerçek toplamdır.
+  const totalPassengers = Math.round(data.reduce((sum, d) => sum + d.toplam_kisi, 0))
 
   return (
     <div style={styles.root}>
@@ -197,10 +220,8 @@ export default function DashboardPage({ onNavigate }) {
                   <span style={styles.legendDot('#ef4444')} /> Yüksek
                 </div>
               </div>
-              <div style={styles.mapPlaceholder}>
-                <div style={styles.mapPlaceholderIcon}>🗺</div>
-                <div style={styles.mapPlaceholderText}>Harita görünümü</div>
-                <div style={styles.mapPlaceholderSub}>Gerçek zamanlı harita entegrasyonu yakında</div>
+              <div style={{ height: '340px', borderRadius: '10px', overflow: 'hidden' }}>
+                <CanliHarita />
               </div>
             </div>
 
@@ -291,6 +312,14 @@ export default function DashboardPage({ onNavigate }) {
               </div>
             </div>
 
+            {trendAsama === 'yukleniyor' && data.length === 0 && (
+              <div style={styles.emptyState}>Trend verisi yükleniyor…</div>
+            )}
+            {trendAsama === 'demo' && (
+              <div style={styles.demoBanner}>
+                Backend'e ulaşılamadı — demo verisi gösteriliyor ({API_TABANI})
+              </div>
+            )}
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -301,12 +330,12 @@ export default function DashboardPage({ onNavigate }) {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis
-                  dataKey="time"
-                  tickFormatter={i => formatXAxis(i, selectedRange)}
+                  dataKey="zaman"
+                  tickFormatter={z => formatXAxis(z, selectedRange)}
                   tick={{ fontSize: 11, fill: '#9ca3af' }}
                   axisLine={false}
                   tickLine={false}
-                  interval={Math.floor(data.length / 7)}
+                  interval={Math.max(0, Math.floor(data.length / 7))}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: '#9ca3af' }}
@@ -317,7 +346,7 @@ export default function DashboardPage({ onNavigate }) {
                 <Tooltip content={<CustomTooltip range={selectedRange} />} />
                 <Area
                   type="monotone"
-                  dataKey="value"
+                  dataKey="toplam_kisi"
                   stroke="#111827"
                   strokeWidth={2}
                   fill="url(#passengerGradient)"
@@ -414,14 +443,6 @@ const styles = {
   cardSubtitle: { fontSize: '12px', color: '#9ca3af', marginTop: '2px' },
   mapLegend: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#6b7280' },
   legendDot: (color) => ({ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: color, marginRight: '4px' }),
-  mapPlaceholder: {
-    height: '340px', background: '#f9fafb', borderRadius: '10px',
-    border: '2px dashed #e5e7eb', display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center', gap: '8px',
-  },
-  mapPlaceholderIcon: { fontSize: '40px', opacity: 0.3 },
-  mapPlaceholderText: { fontSize: '14px', fontWeight: '600', color: '#9ca3af' },
-  mapPlaceholderSub: { fontSize: '12px', color: '#d1d5db' },
   linkBtn: { fontSize: '12px', color: '#6b7280', textDecoration: 'none' },
   alertItem: { display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 0', borderTop: '1px solid #f3f4f6' },
   alertBar: { width: '3px', height: '36px', borderRadius: '2px', flexShrink: 0 },
@@ -433,6 +454,7 @@ const styles = {
   aiText: { fontSize: '12px', color: '#374151', lineHeight: 1.5 },
   priorityBadge: { fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '999px' },
   emptyState: { fontSize: '12px', color: '#9ca3af', padding: '12px 0', textAlign: 'center' },
+  demoBanner: { padding: '10px 14px', fontSize: '13px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', marginBottom: '12px' },
   chartCard: { background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' },
   chartHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
   chartControls: { display: 'flex', alignItems: 'center', gap: '12px' },

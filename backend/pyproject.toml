@@ -15,6 +15,7 @@ dependencies = [
     "bcrypt>=4.1",
     "pyjwt>=2.8",
     "google-genai>=1.0,<2.0",
+    "httpx>=0.27",
     # Lokal AI motoru (SimpleAgent + Ollama). PyPI'da yok; doğrulanmış commit'e sabitli.
     "openjarvis @ git+https://github.com/open-jarvis/OpenJarvis.git@8b59eb87e0b6006d898947647b042bba28e25ed4",
 ]
