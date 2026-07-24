@@ -108,7 +108,12 @@ export default function DashboardPage({ onNavigate }) {
 
   const routes = [{ label: 'Tüm Hatlar', value: 'all' }, ...hatlar.map((h) => ({ label: h.code, value: String(h.hat_id) }))]
   const data = trendVerisi
-  const totalPassengers = Math.round(data.reduce((sum, d) => sum + d.ortalama_kisi, 0))
+  // Her nokta bir zaman kovasının ORTALAMASI — gerçek toplam yolcu sayısı için
+  // olcum_sayisi ağırlıklı toplama gerekir (aksi halde 15dk/saat/gün aralıkları
+  // arasında kova başına farklı ölçüm sayısı yüzünden toplamlar tutarsız çıkar).
+  const totalPassengers = Math.round(
+    data.reduce((sum, d) => sum + d.ortalama_kisi * (d.olcum_sayisi ?? 1), 0)
+  )
 
   return (
     <div style={styles.root}>

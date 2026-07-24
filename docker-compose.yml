@@ -52,7 +52,10 @@ services:
       # GEMINI_API_KEY yaz — DİKKAT: o modda yoğunluk verisi Google'a gider.
       AI_MOTOR: ${AI_MOTOR:-local}
       OLLAMA_ADRESI: http://ollama:11434
-      YEREL_MODEL: ${YEREL_MODEL:-alibayram/turkish-gemma-9b-v0.1:latest}
+      # Küçük/hızlı model: turkish-gemma-9b CPU'da öneri üretimini tıkıyordu
+      # (yüksek CPU + event loop bloklaması). Asistan sohbeti ayrı servis,
+      # kendi ASISTAN_MODEL'ini kullanmaya devam ediyor, buradan etkilenmez.
+      YEREL_MODEL: ${YEREL_MODEL:-qwen3.5:0.8b}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - "8000:8000"

@@ -68,7 +68,9 @@ class PostgresSorgular:
     ) -> list[dict]:
         """hat_id × gun_no (0=Pazar..6=Cumartesi) × saat_dilimi(2 saatlik kova) →
         ortalama_doluluk, ortalama_kisi, olcum_sayisi. Az örneklemli kovalar elenir
-        (min_olcum_sayisi) — LLM'e istatistiksel gürültü gitmesin diye.
+        (min_olcum_sayisi) — LLM'e istatistiksel gürültü gitmesin diye. hat_no,
+        LLM'in öneri metninde gerçek hat koduna (örn. "15A") referans verebilmesi
+        için eklenir — Oneri domain modeline yazılmaz, yalnız LLM girdisidir.
         """
         gun_no = func.extract("dow", OlcumTablosu.olcum_zamani).cast(Integer).label("gun_no")
         saat_baslangic = (
@@ -79,19 +81,21 @@ class PostgresSorgular:
         ifade = (
             select(
                 OlcumTablosu.hat_id,
+                HatTablosu.hat_no,
                 gun_no,
                 saat_baslangic,
                 func.avg(OlcumTablosu.doluluk_orani).label("ortalama_doluluk"),
                 func.avg(OlcumTablosu.kisi_sayisi).label("ortalama_kisi"),
                 func.count().label("olcum_sayisi"),
             )
+            .join(HatTablosu, HatTablosu.id == OlcumTablosu.hat_id)
             .where(
                 OlcumTablosu.hat_id.is_not(None),
                 OlcumTablosu.doluluk_orani.is_not(None),
                 OlcumTablosu.olcum_zamani >= baslangic,
                 OlcumTablosu.olcum_zamani <= bitis,
             )
-            .group_by(OlcumTablosu.hat_id, gun_no, saat_baslangic)
+            .group_by(OlcumTablosu.hat_id, HatTablosu.hat_no, gun_no, saat_baslangic)
             .having(func.count() >= min_olcum_sayisi)
             .order_by(OlcumTablosu.hat_id, gun_no, saat_baslangic)
         )
@@ -104,22 +108,25 @@ class PostgresSorgular:
     ) -> list[dict]:
         """hat_id → ortalama_doluluk, ortalama_kisi, olcum_sayisi (verilen pencerede, gün/saat
         kovası yok). "Yoğun" filtrelemesi burada yapılmaz; use-case katmanında
-        seviye_belirle ile yapılır (bkz. app/application/uyari_uret.py).
+        seviye_belirle ile yapılır (bkz. app/application/uyari_uret.py). hat_no,
+        LLM'in uyarı metninde gerçek hat koduna referans verebilmesi için eklenir.
         """
         ifade = (
             select(
                 OlcumTablosu.hat_id,
+                HatTablosu.hat_no,
                 func.avg(OlcumTablosu.doluluk_orani).label("ortalama_doluluk"),
                 func.avg(OlcumTablosu.kisi_sayisi).label("ortalama_kisi"),
                 func.count().label("olcum_sayisi"),
             )
+            .join(HatTablosu, HatTablosu.id == OlcumTablosu.hat_id)
             .where(
                 OlcumTablosu.hat_id.is_not(None),
                 OlcumTablosu.doluluk_orani.is_not(None),
                 OlcumTablosu.olcum_zamani >= baslangic,
                 OlcumTablosu.olcum_zamani <= bitis,
             )
-            .group_by(OlcumTablosu.hat_id)
+            .group_by(OlcumTablosu.hat_id, HatTablosu.hat_no)
             .having(func.count() >= min_olcum_sayisi)
             .order_by(OlcumTablosu.hat_id)
         )

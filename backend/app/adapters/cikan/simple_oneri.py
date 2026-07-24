@@ -19,6 +19,8 @@ from app.domain.modeller import Oneri
 _SEMA = (
     '{"oneriler": [{"hat_id": int, "gun_no": int, "saat_baslangic": int, '
     '"oneri_metni": str, "gerekce": str}]}. '
+    "oneri_metni ve gerekce içinde hattan bahsederken girdideki hat_no "
+    "değerini kullan (örn. 'Hat 15A'), hat_id'yi metne yazma. "
     "Belirgin sapma yoksa oneriler boş liste olsun."
 )
 
