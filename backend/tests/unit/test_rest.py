@@ -59,14 +59,19 @@ class SahteSorgular:
         cihazlar: list[Cihaz] = (),
         trend: list[dict] = (),
         olcumler: list[Olcum] = (),
+        hat_durak_sayilari: dict[int, int] | None = None,
     ) -> None:
         self.hatlar = list(hatlar)
         self.cihazlar = list(cihazlar)
         self._trend = list(trend)
         self._olcumler = list(olcumler)
+        self._hat_durak_sayilari = hat_durak_sayilari or {}
 
     async def hatlari_listele(self) -> list[Hat]:
         return self.hatlar
+
+    async def hat_durak_sayilarini_listele(self) -> dict[int, int]:
+        return self._hat_durak_sayilari
 
     async def cihazlari_listele(self) -> list[Cihaz]:
         return self.cihazlar
@@ -118,6 +123,35 @@ async def test_verisi_olmayan_hat_bos_ortalama_doner() -> None:
 
     (hat,) = yanit.json()
     assert hat["ortalama_doluluk"] is None
+
+
+async def test_hatlar_listesi_durak_sayisini_icerir() -> None:
+    anlik = SahteAnlikDurum()
+    sorgular = SahteSorgular(
+        hatlar=[Hat(id=1, hat_no="12", ad="Üsküdar – Beykoz")],
+        hat_durak_sayilari={1: 9},
+    )
+
+    async with _istemci(anlik, sorgular) as istemci:
+        yanit = await istemci.get("/api/hatlar")
+
+    (hat,) = yanit.json()
+    assert hat["durak_sayisi"] == 9
+
+
+async def test_durak_sayisi_bilinmeyen_hat_icin_sifir_doner() -> None:
+    """Durak ilişkisi tohumlanmamış hat listeyi düşürmemeli (KeyError yerine 0)."""
+    anlik = SahteAnlikDurum()
+    sorgular = SahteSorgular(
+        hatlar=[Hat(id=7, hat_no="15", ad="Üsküdar – Ümraniye")],
+        hat_durak_sayilari={1: 9},
+    )
+
+    async with _istemci(anlik, sorgular) as istemci:
+        yanit = await istemci.get("/api/hatlar")
+
+    (hat,) = yanit.json()
+    assert hat["durak_sayisi"] == 0
     assert hat["seviye"] is None
     assert hat["arac_sayisi"] == 0
 

@@ -1,36 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useClock } from '../hooks/useClock'
+import { duraklariGetir } from '../api/duraklar'
+import { API_TABANI } from '../api/client'
 
-const stops = [
-  { code: 'D-1024', name: 'Atatürk Meydanı', address: 'Merkez, Cumhuriyet Bulvarı', lines: ['Hat 5', 'Hat 12', 'Hat 24', 'M1'], occupancy: 85, accessible: true, wifi: true, digital: true },
-  { code: 'D-2105', name: 'Şehir Hastanesi', address: 'Sağlık Mah. Hastane Yolu', lines: ['Hat 7', 'Hat 8', 'Hat 11', 'H1'], occupancy: 60, accessible: true, wifi: true, digital: true },
-  { code: 'D-3042', name: 'Teknokent Girişi', address: 'Üniversite Kampüsü', lines: ['Hat 5', 'Hat 12', 'Hat 15'], occupancy: 30, accessible: true, wifi: true, digital: true },
-  { code: 'D-0921', name: 'Mavi Durak', address: 'Öğrenci Köyü Yolu', lines: ['Hat 1', 'Hat 5', 'Hat 22'], occupancy: 45, accessible: false, wifi: false, digital: true },
-  { code: 'D-4410', name: 'Sanayi Sitesi', address: 'Organize Sanayi Bölgesi', lines: ['Hat 2', 'Hat 18', 'Hat 31'], occupancy: 75, accessible: true, wifi: false, digital: true },
-  { code: 'D-5522', name: 'Marina Evleri', address: 'Kıyıboyu Cad. Sahil', lines: ['Hat 9', 'Hat 12', 'S1'], occupancy: 20, accessible: true, wifi: true, digital: true },
-  { code: 'D-1188', name: 'Kütüphane Meydanı', address: 'Eğitim Mah. Kitap Sokak', lines: ['Hat 5', 'Hat 14', 'Hat 16'], occupancy: 55, accessible: true, wifi: false, digital: false },
-  { code: 'D-0001', name: 'Otogar Ana Çıkış', address: 'Şehirlerarası Terminal', lines: ['Hat 101', 'Hat 202', 'Hat 303'], occupancy: 95, accessible: true, wifi: true, digital: true },
+// Mock veri — SİLİNMEDİ; backend'e ulaşılamazsa yedek (demo) olarak kullanılır.
+const DEMO_DURAKLAR = [
+  { id: 'D-1024', ad: 'Atatürk Meydanı', enlem: null, boylam: null, hatKodlari: [] },
+  { id: 'D-2105', ad: 'Şehir Hastanesi', enlem: null, boylam: null, hatKodlari: [] },
+  { id: 'D-3042', ad: 'Teknokent Girişi', enlem: null, boylam: null, hatKodlari: [] },
 ]
-
-function occupancyColor(pct) {
-  if (pct >= 80) return '#ef4444'
-  if (pct >= 50) return '#f59e0b'
-  return '#22c55e'
-}
-
-function borderColor(pct) {
-  if (pct >= 80) return '#ef4444'
-  if (pct >= 50) return '#f59e0b'
-  return '#22c55e'
-}
 
 export default function StopsPage({ onNavigate }) {
   const time = useClock()
   const [search, setSearch] = useState('')
+  const [duraklar, setDuraklar] = useState([])
+  const [asama, setAsama] = useState('yukleniyor') // 'yukleniyor' | 'hazir' | 'demo'
 
-  const filtered = stops.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.code.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    let iptal = false
+    setAsama('yukleniyor')
+    duraklariGetir()
+      .then((veri) => { if (!iptal) { setDuraklar(veri); setAsama('hazir') } })
+      .catch(() => { if (!iptal) { setDuraklar(DEMO_DURAKLAR); setAsama('demo') } })
+    return () => { iptal = true }
+  }, [])
+
+  const filtered = duraklar.filter(d =>
+    d.ad.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -112,7 +108,7 @@ export default function StopsPage({ onNavigate }) {
           <div style={s.pageHeader}>
             <div>
               <h1 style={s.pageTitle}>Duraklar</h1>
-              <p style={s.pageSubtitle}>Toplam {stops.length} durak sistemde kayıtlı ve izleniyor.</p>
+              <p style={s.pageSubtitle}>Toplam {duraklar.length} durak sistemde kayıtlı ve izleniyor.</p>
             </div>
             <div style={s.headerRight}>
               <div style={s.searchWrapper}>
@@ -130,66 +126,65 @@ export default function StopsPage({ onNavigate }) {
             </div>
           </div>
 
-          {/* Grid */}
-          <div style={s.grid}>
-            {filtered.map(stop => (
-              <div key={stop.code} style={{ ...s.card, borderLeftColor: borderColor(stop.occupancy) }}>
-                <div style={s.cardTop}>
-                  <div style={s.stopIcon}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          {/* Durumlar / grid */}
+          {asama === 'yukleniyor' && <div style={s.durumKutu}>Duraklar yükleniyor…</div>}
+          {asama === 'demo' && (
+            <div style={s.demoBanner}>
+              Backend'e ulaşılamadı — demo verisi gösteriliyor ({API_TABANI})
+            </div>
+          )}
+          {asama !== 'yukleniyor' && filtered.length === 0 && (
+            <div style={s.durumKutu}>Durak bulunamadı.</div>
+          )}
+          {asama !== 'yukleniyor' && filtered.length > 0 && (
+            <div style={s.grid}>
+              {filtered.map(stop => (
+                <div key={stop.id} style={s.card}>
+                  <div style={s.cardTop}>
+                    <div style={s.stopIcon}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
+                    </div>
+                    <span style={s.stopCode}>#{stop.id}</span>
+                  </div>
+
+                  <div style={s.stopName}>{stop.ad}</div>
+                  <div style={s.stopAddress}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                      <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                     </svg>
+                    {stop.enlem != null ? `${stop.enlem.toFixed(4)}, ${stop.boylam.toFixed(4)}` : '—'}
                   </div>
-                  <span style={s.stopCode}>{stop.code}</span>
-                </div>
 
-                <div style={s.stopName}>{stop.name}</div>
-                <div style={s.stopAddress}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                    <polygon points="3 11 22 2 13 21 11 13 3 11"/>
-                  </svg>
-                  {stop.address}
-                </div>
+                  {stop.hatKodlari?.length > 0 && (
+                    <div style={s.linesTags}>
+                      {stop.hatKodlari.map(kod => (
+                        <span key={kod} style={s.lineTag}>{kod}</span>
+                      ))}
+                    </div>
+                  )}
 
-                <div style={s.linesTags}>
-                  {stop.lines.map(l => (
-                    <span key={l} style={s.lineTag}>{l}</span>
-                  ))}
-                </div>
+                  <div style={s.cardDivider} />
 
-                <div style={s.cardDivider} />
-
-                <div style={s.features}>
-                  <span style={{ ...s.feature, color: stop.accessible ? '#111827' : '#d1d5db' }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
-                    Erişim
-                  </span>
-                  <span style={{ ...s.feature, color: stop.wifi ? '#111827' : '#d1d5db' }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
-                    Wi-Fi
-                  </span>
-                  <span style={{ ...s.feature, color: stop.digital ? '#111827' : '#d1d5db' }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    Dijital
-                  </span>
-                </div>
-
-                <div style={s.cardDivider} />
-
-                <div style={s.cardBottom}>
-                  <div>
-                    <div style={s.occupancyLabel}>DOLULUK</div>
-                    <div style={{ ...s.occupancyValue, color: occupancyColor(stop.occupancy) }}>%{stop.occupancy}</div>
-                  </div>
-                  <div style={s.arrowBtn}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                    </svg>
+                  <div style={s.cardBottom}>
+                    <div>
+                      <div style={s.occupancyLabel}>DOLULUK</div>
+                      <div style={s.occupancyValue}>—</div>
+                    </div>
+                    <div
+                      style={{ ...s.arrowBtn, cursor: 'pointer' }}
+                      onClick={() => onNavigate && onNavigate('live-map')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <footer style={s.footer}>
@@ -226,6 +221,8 @@ const s = {
   topbarMeta: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#6b7280' },
   avatar: { width: '34px', height: '34px', borderRadius: '50%', background: '#111827', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '600' },
   content: { flex: 1, overflow: 'auto', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '24px' },
+  durumKutu: { padding: '40px', textAlign: 'center', color: '#6b7280', fontSize: '14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' },
+  demoBanner: { padding: '10px 14px', fontSize: '13px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' },
   pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
   pageTitle: { fontSize: '26px', fontWeight: '700', color: '#111827', marginBottom: '4px' },
   pageSubtitle: { fontSize: '14px', color: '#6b7280' },
@@ -235,7 +232,7 @@ const s = {
   searchInput: { padding: '10px 14px 10px 36px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', color: '#111827', background: '#fff', outline: 'none', width: '260px' },
   filterBtn: { padding: '10px 18px', background: '#111827', color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' },
-  card: { background: '#ffffff', border: '1px solid #e5e7eb', borderLeft: '4px solid', borderRadius: '12px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' },
+  card: { background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '10px' },
   cardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   stopIcon: { width: '36px', height: '36px', background: '#f3f4f6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   stopCode: { fontSize: '12px', fontWeight: '600', color: '#9ca3af' },
@@ -244,8 +241,6 @@ const s = {
   linesTags: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
   lineTag: { fontSize: '11px', fontWeight: '500', background: '#f3f4f6', color: '#374151', padding: '3px 8px', borderRadius: '6px' },
   cardDivider: { height: '1px', background: '#f3f4f6' },
-  features: { display: 'flex', gap: '14px' },
-  feature: { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '500' },
   cardBottom: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   occupancyLabel: { fontSize: '10px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' },
   occupancyValue: { fontSize: '16px', fontWeight: '700' },

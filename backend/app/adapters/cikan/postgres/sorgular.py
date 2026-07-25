@@ -9,8 +9,16 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import Integer, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.adapters.cikan.postgres.tablolar import CihazTablosu, HatTablosu, OlcumTablosu
-from app.domain.modeller import Cihaz, Hat, Olcum
+from app.adapters.cikan.postgres.tablolar import (
+    CihazTablosu,
+    DurakTablosu,
+    GuzergahTablosu,
+    HatAtamasiTablosu,
+    HatDuraklariTablosu,
+    HatTablosu,
+    OlcumTablosu,
+)
+from app.domain.modeller import Cihaz, Durak, Guzergah, Hat, Olcum
 
 _ARALIK_GENISLIKLERI = {"saat": timedelta(hours=1), "15dk": timedelta(minutes=15)}
 _KOVA_BASLANGICI = datetime(2000, 1, 1, tzinfo=UTC)  # date_bin çapası (herhangi sabit an)
@@ -60,7 +68,9 @@ class PostgresSorgular:
     ) -> list[dict]:
         """hat_id × gun_no (0=Pazar..6=Cumartesi) × saat_dilimi(2 saatlik kova) →
         ortalama_doluluk, ortalama_kisi, olcum_sayisi. Az örneklemli kovalar elenir
-        (min_olcum_sayisi) — LLM'e istatistiksel gürültü gitmesin diye.
+        (min_olcum_sayisi) — LLM'e istatistiksel gürültü gitmesin diye. hat_no,
+        LLM'in öneri metninde gerçek hat koduna (örn. "15A") referans verebilmesi
+        için eklenir — Oneri domain modeline yazılmaz, yalnız LLM girdisidir.
         """
         gun_no = func.extract("dow", OlcumTablosu.olcum_zamani).cast(Integer).label("gun_no")
         saat_baslangic = (
@@ -71,19 +81,21 @@ class PostgresSorgular:
         ifade = (
             select(
                 OlcumTablosu.hat_id,
+                HatTablosu.hat_no,
                 gun_no,
                 saat_baslangic,
                 func.avg(OlcumTablosu.doluluk_orani).label("ortalama_doluluk"),
                 func.avg(OlcumTablosu.kisi_sayisi).label("ortalama_kisi"),
                 func.count().label("olcum_sayisi"),
             )
+            .join(HatTablosu, HatTablosu.id == OlcumTablosu.hat_id)
             .where(
                 OlcumTablosu.hat_id.is_not(None),
                 OlcumTablosu.doluluk_orani.is_not(None),
                 OlcumTablosu.olcum_zamani >= baslangic,
                 OlcumTablosu.olcum_zamani <= bitis,
             )
-            .group_by(OlcumTablosu.hat_id, gun_no, saat_baslangic)
+            .group_by(OlcumTablosu.hat_id, HatTablosu.hat_no, gun_no, saat_baslangic)
             .having(func.count() >= min_olcum_sayisi)
             .order_by(OlcumTablosu.hat_id, gun_no, saat_baslangic)
         )
@@ -96,22 +108,25 @@ class PostgresSorgular:
     ) -> list[dict]:
         """hat_id → ortalama_doluluk, ortalama_kisi, olcum_sayisi (verilen pencerede, gün/saat
         kovası yok). "Yoğun" filtrelemesi burada yapılmaz; use-case katmanında
-        seviye_belirle ile yapılır (bkz. app/application/uyari_uret.py).
+        seviye_belirle ile yapılır (bkz. app/application/uyari_uret.py). hat_no,
+        LLM'in uyarı metninde gerçek hat koduna referans verebilmesi için eklenir.
         """
         ifade = (
             select(
                 OlcumTablosu.hat_id,
+                HatTablosu.hat_no,
                 func.avg(OlcumTablosu.doluluk_orani).label("ortalama_doluluk"),
                 func.avg(OlcumTablosu.kisi_sayisi).label("ortalama_kisi"),
                 func.count().label("olcum_sayisi"),
             )
+            .join(HatTablosu, HatTablosu.id == OlcumTablosu.hat_id)
             .where(
                 OlcumTablosu.hat_id.is_not(None),
                 OlcumTablosu.doluluk_orani.is_not(None),
                 OlcumTablosu.olcum_zamani >= baslangic,
                 OlcumTablosu.olcum_zamani <= bitis,
             )
-            .group_by(OlcumTablosu.hat_id)
+            .group_by(OlcumTablosu.hat_id, HatTablosu.hat_no)
             .having(func.count() >= min_olcum_sayisi)
             .order_by(OlcumTablosu.hat_id)
         )
@@ -146,3 +161,64 @@ class PostgresSorgular:
             )
             for s in satirlar
         ]
+
+    async def duraklari_listele(self) -> list[Durak]:
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.scalars(select(DurakTablosu).order_by(DurakTablosu.id))).all()
+        return [Durak(id=s.id, ad=s.ad, enlem=s.enlem, boylam=s.boylam) for s in satirlar]
+
+    async def hat_duraklarini_listele(self, hat_id: int) -> list[Durak]:
+        """Bir hattın duraklarını sıra numarasına göre döner."""
+        ifade = (
+            select(DurakTablosu)
+            .join(HatDuraklariTablosu, HatDuraklariTablosu.durak_id == DurakTablosu.id)
+            .where(HatDuraklariTablosu.hat_id == hat_id)
+            .order_by(HatDuraklariTablosu.sira)
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.scalars(ifade)).all()
+        return [Durak(id=s.id, ad=s.ad, enlem=s.enlem, boylam=s.boylam) for s in satirlar]
+
+    async def hat_durak_sayilarini_listele(self) -> dict[int, int]:
+        """Her hat_id için durak sayısını döner (LinesPage 'DURAK SAYISI' kartı için)."""
+        ifade = select(HatDuraklariTablosu.hat_id, func.count()).group_by(
+            HatDuraklariTablosu.hat_id
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.execute(ifade)).all()
+        return dict(satirlar)
+
+    async def hat_guzergahini_getir(self, hat_id: int) -> Guzergah | None:
+        async with self._oturum_fabrikasi() as oturum:
+            satir = await oturum.get(GuzergahTablosu, hat_id)
+        if satir is None:
+            return None
+        return Guzergah(
+            hat_id=satir.hat_id,
+            koordinatlar=[tuple(nokta) for nokta in satir.koordinatlar],
+            mesafe_metre=satir.mesafe_metre,
+            sure_saniye=satir.sure_saniye,
+        )
+
+    async def aktif_hat_atamalarini_listele(self) -> list[tuple[int, int]]:
+        """Güncel (bitis IS NULL) araç↔hat atamalarını (arac_id, hat_id) çiftleri olarak döner."""
+        ifade = select(HatAtamasiTablosu.arac_id, HatAtamasiTablosu.hat_id).where(
+            HatAtamasiTablosu.bitis.is_(None)
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.execute(ifade)).all()
+        return [(arac_id, hat_id) for arac_id, hat_id in satirlar]
+
+    async def durak_hat_kodlarini_listele(self) -> dict[int, list[str]]:
+        """Her durak_id için o duraktan geçen hatların kodlarını döner (aktarma bilgisi)."""
+        ifade = (
+            select(HatDuraklariTablosu.durak_id, HatTablosu.hat_no)
+            .join(HatTablosu, HatTablosu.id == HatDuraklariTablosu.hat_id)
+            .order_by(HatDuraklariTablosu.durak_id, HatTablosu.hat_no)
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.execute(ifade)).all()
+        sonuc: dict[int, list[str]] = {}
+        for durak_id, hat_no in satirlar:
+            sonuc.setdefault(durak_id, []).append(hat_no)
+        return sonuc

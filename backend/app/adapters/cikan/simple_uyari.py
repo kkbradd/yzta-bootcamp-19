@@ -15,7 +15,11 @@ from app.adapters.cikan._uyari_ortak import (
 from app.adapters.cikan._yerel_llm import json_talimati, yerel_calistir
 from app.domain.modeller import Uyari
 
-_SEMA = '{"uyarilar": [{"hat_id": int, "uyari_metni": str, "gerekce": str}]}.'
+_SEMA = (
+    '{"uyarilar": [{"hat_id": int, "uyari_metni": str, "gerekce": str}]}. '
+    "uyari_metni ve gerekce içinde hattan bahsederken girdideki hat_no "
+    "değerini kullan (örn. 'Hat 15A'), hat_id'yi metne yazma."
+)
 
 
 class SimpleUyariUreticisi:

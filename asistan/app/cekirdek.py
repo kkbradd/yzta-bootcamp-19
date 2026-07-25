@@ -12,6 +12,7 @@ from typing import Any, Protocol
 
 from openjarvis.agents._stubs import AgentContext
 from openjarvis.agents.orchestrator import OrchestratorAgent
+from openjarvis.core.events import EventBus
 from openjarvis.core.types import Conversation, Message, Role
 from openjarvis.tools._stubs import BaseTool
 
@@ -23,7 +24,8 @@ from app.ayarlar import AZAMI_TOKEN, AZAMI_TUR, SICAKLIK, Ayarlar
 # Genişletmeden önce docs'taki varyant testini tekrarla.
 SISTEM_PROMPTU = (
     "Sen YOTAY asistanısın. Yoğunluk/hat/araç sorularında MUTLAKA önce uygun tool'u çağır "
-    "(hat_yogunluklari, hat_anlik_durum, hat_trend). Tool sonucu olmadan cevap verme."
+    "(hat_yogunluklari, hat_anlik_durum, hat_trend, yogunluk_tahmini). "
+    "Tool sonucu olmadan cevap verme."
 )
 
 
@@ -36,6 +38,7 @@ class AsistanCevabi:
     cevap: str
     tur_sayisi: int
     arac_cagrilari: list[str]
+    model: str = ""
 
 
 class Ureten(Protocol):
@@ -47,7 +50,19 @@ class Ureten(Protocol):
 class Soran(Protocol):
     """HTTP katmanının asistandan beklediği sözleşme."""
 
-    def sor(self, mesaj: str) -> AsistanCevabi: ...
+    def sor(self, mesaj: str, model: str | None = None) -> AsistanCevabi: ...
+
+
+class Akitan(Protocol):
+    """Olay akışı üretebilen asistan — `Soran`'ın üstüne opsiyonel yetenek.
+
+    Ayrı protokol: `Soran`'a metot eklemek mevcut sahte asistanları ve onlara
+    dayanan testleri kırardı.
+    """
+
+    def akit(
+        self, mesaj: str, bus: "EventBus", model: str | None = None
+    ) -> AsistanCevabi: ...
 
 
 def _sistem_baglami() -> AgentContext:
@@ -105,18 +120,40 @@ class YotayAsistani:
         kaynak = YotayVeriKaynagi.adresten(ayarlar.yotay_api_adresi)
         return cls(ayarlar, motor=_motor_kur(ayarlar), araclar=varsayilan_araclar(kaynak))
 
-    def sor(self, mesaj: str) -> AsistanCevabi:
+    def sor(self, mesaj: str, model: str | None = None) -> AsistanCevabi:
+        """Soruyu yanıtlar; `model` verilirse o modelle, yoksa varsayılanla.
+
+        Model adı ajan başına verilir (motor bağlantısı ortaktır), böylece deneme
+        ekranı aynı serviste farklı modelleri karşılaştırabilir.
+        """
+        return self._calistir(mesaj, model)
+
+    def akit(
+        self, mesaj: str, bus: EventBus, model: str | None = None
+    ) -> AsistanCevabi:
+        """`sor` ile aynı işi yapar, farkı her adımı `bus`a yaymasıdır.
+
+        Ajan bus'ı ToolExecutor'a kendisi geçirdiği için tool çağrıları da yayılır.
+        """
+        return self._calistir(mesaj, model, bus=bus)
+
+    def _calistir(
+        self, mesaj: str, model: str | None, bus: EventBus | None = None
+    ) -> AsistanCevabi:
+        secilen_model = model or self._ayarlar.model
         vekil = OrchestratorAgent(
             self._motor,
-            self._ayarlar.model,
+            secilen_model,
             tools=self._araclar,
             max_turns=AZAMI_TUR,
             temperature=SICAKLIK,
             max_tokens=AZAMI_TOKEN,
+            bus=bus,
         )
         sonuc = vekil.run(mesaj, context=_sistem_baglami())
         return AsistanCevabi(
             cevap=sonuc.content,
             tur_sayisi=sonuc.turns,
             arac_cagrilari=[arac.tool_name for arac in sonuc.tool_results],
+            model=secilen_model,
         )

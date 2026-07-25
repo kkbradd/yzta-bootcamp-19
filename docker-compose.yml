@@ -25,6 +25,11 @@ services:
       POSTGRES_USER: hat01
       POSTGRES_PASSWORD: hat01
       POSTGRES_DB: hat01
+    # Veri adlandırılmış volume'da kalır; yoksa her `compose down` ölçüm geçmişini
+    # silerdi. Bu değişiklikten sonraki ilk açılış boş veritabanıyla başlar,
+    # `seed` idempotent olduğu için tohum kendiliğinden yeniden yüklenir.
+    volumes:
+      - postgres_verisi:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hat01 -d hat01"]
       interval: 3s
@@ -52,7 +57,10 @@ services:
       # GEMINI_API_KEY yaz — DİKKAT: o modda yoğunluk verisi Google'a gider.
       AI_MOTOR: ${AI_MOTOR:-local}
       OLLAMA_ADRESI: http://ollama:11434
-      YEREL_MODEL: ${YEREL_MODEL:-alibayram/turkish-gemma-9b-v0.1:latest}
+      # Küçük/hızlı model: turkish-gemma-9b CPU'da öneri üretimini tıkıyordu
+      # (yüksek CPU + event loop bloklaması). Asistan sohbeti ayrı servis,
+      # kendi ASISTAN_MODEL'ini kullanmaya devam ediyor, buradan etkilenmez.
+      YEREL_MODEL: ${YEREL_MODEL:-qwen3.5:0.8b}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - "8000:8000"
@@ -65,8 +73,10 @@ services:
         condition: service_started
       ollama:
         condition: service_healthy
+      gecmis_veri_yukle:
+        condition: service_completed_successfully
 
-  # Tek seferlik tohum: 3 hat, 5 araç, cihazlar ve atamalar (idempotent).
+  # Tek seferlik tohum: 10 hat, 15 durak, araçlar, cihazlar ve atamalar (idempotent).
   seed:
     build: ./backend
     command: python -m app.seed
@@ -76,6 +86,32 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Tek seferlik güzergah hazırlama: OSRM ile her hat için yol polyline'ı üretir
+  # (idempotent — zaten üretilmiş hatları atlar). seed'den sonra çalışır.
+  guzergah_hazirla:
+    build: ./backend
+    command: python -m app.guzergah_hazirla
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+    restart: "no"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  # Tek seferlik geçmiş veri yükleme: 30 günlük gerçekçi yoğunluk ölçümü üretir
+  # (idempotent — geçmiş veri zaten varsa atlanır). AI öneri motorunun ve
+  # Dashboard trend grafiğinin anlamlı veriyle çalışması için backend'den önce
+  # tamamlanmalı (backend açılışta hemen öneri üretimini tetikliyor).
+  gecmis_veri_yukle:
+    build: ./backend
+    command: python -m app.gecmis_veri_yukle
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hat01:hat01@postgres:5432/hat01
+    restart: "no"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
 
   ollama:
     image: ollama/ollama:latest
@@ -141,5 +177,59 @@ services:
       seed:
         condition: service_completed_successfully
 
+  # Karma demo (gercek profili): edge_0001'i gerçek edge servisine bırakır,
+  # kalan araçları sahte veriyle doldurur. Böylece panelde bir araç CSRNet
+  # sayımıyla, diğerleri simülasyonla akar.
+  simulator_karma:
+    build: ./backend
+    command: >
+      python simulator/simulator.py --broker mosquitto --cihaz 6 --periyot 2
+      --atla ${EDGE_CIHAZ_NO:-1}
+    profiles: ["gercek"]
+    volumes:
+      - ./backend/simulator:/uygulama/simulator:ro
+    depends_on:
+      mosquitto:
+        condition: service_started
+      seed:
+        condition: service_completed_successfully
+
+  # Gerçek veri akışı (gercek profili): videodan CSRNet ile kişi sayıp yayınlar.
+  #
+  #   docker compose --profile gercek up --build
+  #
+  # DİKKAT: `demo` profilindeki simulator ile aynı anda çalıştırmayın. İkisi de
+  # edge_0001 adına yayın yapar ve sira_no'yu aynı saat tohumundan üretir;
+  # çakışan ölçümler backend'de UNIQUE(cihaz_id, sira_no) nedeniyle sessizce
+  # yutulur. Profiller ayrı olduğu için varsayılan kullanımda bu mümkün değildir.
+  # (simulator_karma bu cihazı --atla ile dışarıda bıraktığı için güvenlidir.)
+  #
+  # Kurulum: CSRNet ağırlığı depoda hazır gelir; yalnız videoyu koymak yeterlidir.
+  #   1. Videoyu edge/videolar/otobus.mp4 olarak koyun (EDGE_VIDEO_YOLU ile değişir)
+  # Video yoksa EDGE_MOTOR=sahte ile boru hattı videosuz/modelsiz denenebilir.
+  edge:
+    build: ./edge
+    profiles: ["gercek"]
+    environment:
+      EDGE_MOTOR: ${EDGE_MOTOR:-csrnet}
+      EDGE_BROKER: mosquitto
+      EDGE_VIDEO_YOLU: ${EDGE_VIDEO_YOLU:-/uygulama/videolar/otobus.mp4}
+      EDGE_AGIRLIK_YOLU: /uygulama/model/csrnet_partB.pth
+      # Otobüs içi görüntüsü modelin eğitim dağılımı dışında; ham sayımı
+      # gerçeğe oturtmak için elle kalibre edilir (ham değer de loglanır).
+      # 0.78: otobus.mp4'ün 45 saniyelik elle sayılmış referansına karşı en
+      # küçük kareler ile ölçüldü (korelasyon 0.88, MAE 1.64 → 1.06 kişi).
+      # Başka bir video/kamera açısı için yeniden ölçülmeli.
+      EDGE_SAYIM_CARPANI: ${EDGE_SAYIM_CARPANI:-0.78}
+    volumes:
+      - ./edge/videolar:/uygulama/videolar:ro
+      - ./model:/uygulama/model:ro
+    depends_on:
+      mosquitto:
+        condition: service_started
+      seed:
+        condition: service_completed_successfully
+
 volumes:
   ollama_modelleri:
+  postgres_verisi:

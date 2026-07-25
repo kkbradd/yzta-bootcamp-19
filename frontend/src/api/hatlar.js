@@ -7,7 +7,7 @@ export function seviyeToDurum(seviye) {
   return SEVIYE_ESLEME[seviye] ?? 'veriyok'
 }
 
-// GET /api/hatlar -> UI kart şekli. duration/stops backend'de yok (sayfada '—').
+// GET /api/hatlar -> UI kart şekli. duration backend'de yok (sayfada '—').
 export async function hatlariGetir() {
   const hatlar = await apiGet('/api/hatlar')
   return hatlar.map((h) => ({
@@ -15,6 +15,7 @@ export async function hatlariGetir() {
     code: h.hat_no,
     route: h.ad,
     buses: h.arac_sayisi,
+    stops: h.durak_sayisi,
     durum: seviyeToDurum(h.seviye),
     ortalamaDoluluk: h.ortalama_doluluk,
   }))

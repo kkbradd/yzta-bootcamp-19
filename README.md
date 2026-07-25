@@ -87,17 +87,107 @@ Varsayılan kurulumda hiçbir veri makineden çıkmaz. Tek komutla çalıştırm
 ```bash
 docker compose --profile demo up --build
 # Panel: http://localhost:3000 — sağ alttaki 💬 düğmesi sohbeti açar.
+# Deneme ekranı: http://localhost:3000/#asistan (oturum gerektirmez)
 
 # Ya da doğrudan API'den:
 curl -X POST localhost:8100/chat -H "Content-Type: application/json" \
      -d '{"mesaj": "Şu an hatlarda yoğunluk nasıl?"}'
 ```
 
+**Ekip içi deneme ekranı** (`/#asistan`): panelden bağımsız, oturum istemeyen bir test
+alanı. **İki sekmesi** var:
+
+- **💬 Sohbet** — normal chatbot görünümü. Her cevabın altında çağrılan tool'lar, model
+  ve süre görünür. Tool çağrılmadan gelen cevaplar *"araç kullanılmadı — doğrulanmadı"*
+  diye işaretlenir: küçük model alakasız sorularda tool çağırmadan uydurabiliyor.
+- **📡 EventBus** — OpenJarvis'in yayınladığı **tüm** olayların canlı akışı. Zaman
+  damgalı, filtresiz: modelin tool çağırma kararı (`inference_end.tool_calls`), hangi
+  argümanlarla çağırdığı, tool'un ham çıktısı, token sayıları, her adımın süresi.
+
+Akış SSE ile canlı gelir (`POST /chat/akis`) — model düşünürken adımlar anında görünür,
+sonda topluca değil. Tool çağırma davranışı prompt'a duyarlı olduğu için takım
+arkadaşları değişikliklerin etkisini burada gözleyebilir.
+
+```bash
+# SSE ucunu doğrudan denemek için:
+curl -N -X POST localhost:8100/chat/akis -H "Content-Type: application/json" \
+     -d '{"mesaj":"Su an en yogun hat hangisi?"}'
+```
+
+**Model seçimi:** Ekranın üstünden model değiştirilebilir. Varsayılan `qwen3.5:0.8b`
+konteyner açılışında indirilir ve hemen kullanıma hazırdır; daha büyük modeller
+listelenir ama **yalnız istendiğinde** indirilir (`indir` düğmesi, birkaç dakika sürer).
+İndirilen modeller `ollama_modelleri` volume'unda kalıcıdır — bir kez indirilen model
+sonraki açılışlarda hazırdır.
+
+| Model | Boyut | Durum |
+|-------|-------|-------|
+| `qwen3.5:0.8b` | ~1 GB | Varsayılan, açılışta indirilir |
+| `qwen3.5:1.7b` | ~1.4 GB | İstendiğinde indirilir |
+| `qwen3.5:4b` | ~2.6 GB | İstendiğinde indirilir |
+| `llama3.2:3b` | ~2 GB | İstendiğinde indirilir |
+
+> Model listesi bilinçli olarak küçük tutuldu: 8B üstü modeller CPU'da tool çağırmayı
+> dakikalar süren bir işe çeviriyor. Servis yalnız bu listedeki adları kabul eder —
+> serbest model adı keyfi indirme tetikleyebilirdi.
+
+**Asistanın araçları:**
+
+| Tool | Ne yapar | Kaynak |
+|------|----------|--------|
+| `hat_yogunluklari` | Tüm hatların anlık doluluğu | Backend REST |
+| `hat_anlik_durum` | Bir hattaki araçların durumu | Backend REST |
+| `hat_trend` | Hattın saatlik seyri | Backend REST |
+| `yogunluk_tahmini` | Hava + saat ile doluluk tahmini | Yerel joblib modeli |
+
+> `yogunluk_tahmini` bir **demo modelidir**: sentetik veriyle eğitilmiştir (gerçek
+> veride hava/saat ↔ doluluk ilişkisi bulunamamış, R²~0). Tool çıktısı bu yüzden her
+> zaman "tahmindir, gerçek ölçüm değildir" notu taşır. Model dosyası yoksa asistan
+> diğer üç araçla çalışmaya devam eder.
+
 Cevap kalitesi yetmezse opsiyonel olarak Gemini'ye geçilebilir (`ASISTAN_MOTOR=cloud`
 + `GEMINI_API_KEY`); bu modda veriler Google'a gider, bkz.
 [asistan/README.md](asistan/README.md#gemini-ile-çalıştırma-opsiyonel).
 
 Ayrıntılar: [asistan/README.md](asistan/README.md)
+
+</details>
+
+---
+
+<details>
+  <summary><h2>Veri Metodolojisi</h2></summary>
+
+Sistemdeki sayılar tahminle değil ölçümle belirlendi. İki ayrı kalibrasyon var:
+
+**1. Mock yoğunluk eğrisi — İBB açık verisinden.** Demo verisinin saatlik doluluk
+çarpanları uydurulmadı; [İBB Saatlik Toplu Ulaşım Veri Seti](https://data.ibb.gov.tr/dataset/hourly-public-transport-data-set)
+(BELBİM akbil işlemleri) indirilip 5 tam iş günü (Ekim 2024) ve bir Pazar (Eylül 2024)
+üzerinden **171.438 Üsküdar binişi** toplulaştırıldı.
+
+Veriden çıkan üç bulgu tasarımı doğrudan etkiledi:
+
+- **07:00 günün en yoğun saati** (Üsküdar binişlerinin %9.6'sı) — sabah zirvesi keskin
+- **Akşam 15:00–18:00 bir plato**, sivri tepe değil; saat başına daha az yoğun ama
+  toplamda sabah zirvesinden **daha fazla yolcu** taşıyor
+- **Hafta sonu "ölçeklenmiş iş günü" değil**: Pazar toplamı iş gününün ~%45'i ama
+  sabah zirvesi **tamamen kayboluyor** (07:00'de 0.18 ↔ 1.15, ~6 kat fark)
+
+**2. CSRNet sayım ölçeği — elle sayımla.** Demo videosunun 45 saniyesinin her biri elle
+sayılıp modelin ham çıktısıyla karşılaştırıldı:
+
+| Ölçüt | Değer |
+|---|---|
+| Korelasyon (ham ↔ gerçek) | **0.88** |
+| MAE, çarpansız → kalibre | 1.64 → **1.06 kişi** |
+| `EDGE_SAYIM_CARPANI` | **0.78** |
+
+Model insan sayısındaki *değişimi* doğru takip ediyor; yalnız ölçeği kayıktı.
+
+> Tam yöntem, seçilen günler, uygulanan düzeltmeler ve **bilinen sınırlar** (zirve
+> değeri 1.15 ölçülmüş bir doluluk değil, kalibre edilmiş bir seçimdir; hafta sonu
+> eğrisi tek bir Pazara dayanır):
+> **[docs/veri-metodolojisi.md](docs/veri-metodolojisi.md)**
 
 </details>
 

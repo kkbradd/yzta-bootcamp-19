@@ -9,8 +9,27 @@ AZAMI_TOKEN = 512
 SICAKLIK = 0.0
 VARSAYILAN_TREND_SAATI = 3
 
+# Tek bir SSE olay gövdesinin üst sınırı. inference_end.content yukarı akışta
+# kırpılmıyor; aşırı büyük bir olay akışı tıkamasın diye kendi savunmamız.
+AZAMI_OLAY_BAYTI = 16384
+
 GEMINI_ANAHTAR_DEGISKENLERI = ("GEMINI_API_KEY", "GOOGLE_API_KEY")
 BULUT_MOTORU = "cloud"
+
+VARSAYILAN_MODEL = "qwen3.5:0.8b"
+
+# Deneme ekranında seçilebilen lokal modeller. Varsayılan model konteyner
+# açılışında çekilir; diğerleri kullanıcı isteyince indirilir (indirme birkaç
+# dakika sürebilir). Liste bilinçli olarak küçük tutuldu: 8B üstü modeller
+# CPU'da tool çağırmayı dakikalar süren bir işe çeviriyor.
+SECILEBILIR_MODELLER = (
+    {"ad": VARSAYILAN_MODEL, "etiket": "Qwen 3.5 0.8B", "boyut": "~1 GB"},
+    {"ad": "qwen3.5:1.7b", "etiket": "Qwen 3.5 1.7B", "boyut": "~1.4 GB"},
+    {"ad": "qwen3.5:4b", "etiket": "Qwen 3.5 4B", "boyut": "~2.6 GB"},
+    {"ad": "llama3.2:3b", "etiket": "Llama 3.2 3B", "boyut": "~2 GB"},
+)
+
+SECILEBILIR_MODEL_ADLARI = tuple(model["ad"] for model in SECILEBILIR_MODELLER)
 # Panel farklı port'tan çağırdığı için tarayıcı CORS ister (backend ile aynı kalıp).
 VARSAYILAN_CORS_ORIGINLERI = "http://localhost:3000,http://localhost:5173"
 
@@ -54,7 +73,7 @@ class Ayarlar:
         ayarlar = cls(
             yotay_api_adresi=os.getenv("YOTAY_API_ADRESI", "http://localhost:8000"),
             ollama_adresi=os.getenv("OLLAMA_ADRESI", "http://localhost:11434"),
-            model=os.getenv("ASISTAN_MODEL", "qwen3.5:0.8b"),
+            model=os.getenv("ASISTAN_MODEL", VARSAYILAN_MODEL),
             motor=os.getenv("ASISTAN_MOTOR", "ollama"),
             gemini_anahtari=_gemini_anahtarini_oku(),
             cors_izinli_originler=os.getenv(

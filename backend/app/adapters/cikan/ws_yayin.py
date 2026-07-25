@@ -3,6 +3,7 @@
 Mesaj sözleşmesi (plan Bölüm 8.5/9):
   {"tip": "arac_guncelleme", arac_id, hat_id, kisi_sayisi, doluluk_orani, seviye, zaman}
   {"tip": "cihaz_durum", cihaz_id, cevrimici, son_gorulme}
+  {"tip": "arac_konum", arac_id, hat_id, enlem, boylam}
 Kopan istemci yayını bozmaz; ilk gönderim hatasında sessizce düşürülür.
 """
 
@@ -70,5 +71,18 @@ class BaglantiYoneticisi:
                 "cihaz_id": cihaz_id,
                 "cevrimici": cevrimici,
                 "son_gorulme": son_gorulme.isoformat() if son_gorulme else None,
+            }
+        )
+
+    async def arac_konumunu_yayinla(
+        self, arac_id: int, hat_id: int, enlem: float, boylam: float
+    ) -> None:
+        await self._yayinla(
+            {
+                "tip": "arac_konum",
+                "arac_id": arac_id,
+                "hat_id": hat_id,
+                "enlem": enlem,
+                "boylam": boylam,
             }
         )

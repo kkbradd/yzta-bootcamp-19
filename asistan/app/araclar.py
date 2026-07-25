@@ -5,6 +5,7 @@ API hataları `ToolResult(success=False)`, kullanıcı kaynaklı durumlar (bilin
 geçersiz parametre) açıklayıcı bilgi metni olarak döner.
 """
 
+import logging
 from abc import abstractmethod
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -14,6 +15,8 @@ from openjarvis.core.types import ToolResult
 from openjarvis.tools._stubs import BaseTool, ToolSpec
 
 from app.ayarlar import ISTEK_ZAMAN_ASIMI_SN, VARSAYILAN_TREND_SAATI
+
+logger = logging.getLogger("asistan.araclar")
 
 
 class HatBulunamadi(Exception):
@@ -184,4 +187,31 @@ class HatTrendAraci(_YotayAraci):
 
 
 def varsayilan_araclar(kaynak: YotayVeriKaynagi) -> list[BaseTool]:
-    return [HatYogunluklariAraci(kaynak), HatAnlikDurumAraci(kaynak), HatTrendAraci(kaynak)]
+    """Veri araçları + (yüklenebiliyorsa) tahmin aracı.
+
+    Tahmin modeli opsiyoneldir: artefakt yoksa asistan üç veri aracıyla
+    çalışmaya devam eder, açılışta çökmez.
+    """
+    araclar: list[BaseTool] = [
+        HatYogunluklariAraci(kaynak),
+        HatAnlikDurumAraci(kaynak),
+        HatTrendAraci(kaynak),
+    ]
+    tahmin_araci = _tahmin_aracini_kur()
+    if tahmin_araci is not None:
+        araclar.append(tahmin_araci)
+    return araclar
+
+
+def _tahmin_aracini_kur() -> BaseTool | None:
+    from app.yogunluk_tahmini import (
+        ModelYuklenemedi,
+        YogunlukTahminiAraci,
+        YogunlukTahminModeli,
+    )
+
+    try:
+        return YogunlukTahminiAraci(YogunlukTahminModeli.yoldan())
+    except (ModelYuklenemedi, ImportError) as hata:
+        logger.warning("yoğunluk tahmin aracı devre dışı: %s", hata)
+        return None

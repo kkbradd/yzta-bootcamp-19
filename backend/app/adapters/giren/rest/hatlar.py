@@ -12,7 +12,13 @@ from app.adapters.giren.rest.bagimliliklar import (
     esikleri_getir,
     sorgulari_getir,
 )
-from app.adapters.giren.rest.semalar import AracAnlikDurumu, HatOzeti, TrendNoktasi
+from app.adapters.giren.rest.semalar import (
+    AracAnlikDurumu,
+    DurakYaniti,
+    HatGuzergahYaniti,
+    HatOzeti,
+    TrendNoktasi,
+)
 from app.application.olcum_isle import SeviyeEsikleri
 from app.domain.seviye import seviye_belirle
 
@@ -27,6 +33,7 @@ Esikler = Annotated[SeviyeEsikleri, Depends(esikleri_getir)]
 async def hatlari_listele(
     anlik: AnlikDurum, sorgular: Sorgular, esikler: Esikler
 ) -> list[HatOzeti]:
+    durak_sayilari = await sorgular.hat_durak_sayilarini_listele()
     ozetler = []
     for hat in await sorgular.hatlari_listele():
         ortalama, arac_sayisi = await anlik.hat_ozeti(hat.id)
@@ -42,6 +49,7 @@ async def hatlari_listele(
                     else None
                 ),
                 arac_sayisi=arac_sayisi,
+                durak_sayisi=durak_sayilari.get(hat.id, 0),
             )
         )
     return ozetler
@@ -64,6 +72,20 @@ async def hat_anlik_durumu(hat_id: int, anlik: AnlikDurum) -> list[AracAnlikDuru
             )
         )
     return durumlar
+
+
+@hatlar_router.get("/{hat_id}/guzergah")
+async def hat_guzergahi(hat_id: int, sorgular: Sorgular) -> HatGuzergahYaniti:
+    duraklar = await sorgular.hat_duraklarini_listele(hat_id)
+    guzergah = await sorgular.hat_guzergahini_getir(hat_id)
+    return HatGuzergahYaniti(
+        duraklar=[
+            DurakYaniti(id=d.id, ad=d.ad, enlem=d.enlem, boylam=d.boylam) for d in duraklar
+        ],
+        koordinatlar=guzergah.koordinatlar if guzergah else [],
+        mesafe_metre=guzergah.mesafe_metre if guzergah else None,
+        sure_saniye=guzergah.sure_saniye if guzergah else None,
+    )
 
 
 @hatlar_router.get("/{hat_id}/trend")

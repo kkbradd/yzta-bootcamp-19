@@ -9,6 +9,7 @@ Tüm zaman alanları TIMESTAMPTZ (UTC). Kritik kurallar:
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     CheckConstraint,
     ForeignKey,
@@ -57,6 +58,30 @@ class DurakTablosu(Taban):
     ad: Mapped[str]
     enlem: Mapped[float]
     boylam: Mapped[float]
+
+
+class HatDuraklariTablosu(Taban):
+    __tablename__ = "hat_duraklari"
+    __table_args__ = (
+        UniqueConstraint("hat_id", "sira", name="uq_hat_duraklari_hat_sira"),
+        UniqueConstraint("hat_id", "durak_id", name="uq_hat_duraklari_hat_durak"),
+        Index("ix_hat_duraklari_hat_sira", "hat_id", "sira"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"))
+    durak_id: Mapped[int] = mapped_column(ForeignKey("duraklar.id"))
+    sira: Mapped[int]
+
+
+class GuzergahTablosu(Taban):
+    __tablename__ = "guzergahlar"
+
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"), primary_key=True)
+    koordinatlar: Mapped[list] = mapped_column(JSON)  # [[enlem, boylam], ...]
+    mesafe_metre: Mapped[float]
+    sure_saniye: Mapped[float]
+    olusturulma_zamani: Mapped[datetime]
 
 
 class CihazTablosu(Taban):

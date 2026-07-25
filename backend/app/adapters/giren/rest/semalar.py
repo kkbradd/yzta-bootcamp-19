@@ -13,6 +13,7 @@ class HatOzeti(BaseModel):
     ortalama_doluluk: float | None
     seviye: str | None
     arac_sayisi: int
+    durak_sayisi: int = 0
 
 
 class AracAnlikDurumu(BaseModel):
@@ -36,6 +37,21 @@ class OlcumYaniti(BaseModel):
     doluluk_orani: float | None
     seviye: str | None
     olcum_zamani: datetime
+
+
+class DurakYaniti(BaseModel):
+    id: int
+    ad: str
+    enlem: float
+    boylam: float
+    hat_kodlari: list[str] = []
+
+
+class HatGuzergahYaniti(BaseModel):
+    duraklar: list[DurakYaniti]
+    koordinatlar: list[tuple[float, float]]
+    mesafe_metre: float | None
+    sure_saniye: float | None
 
 
 class CihazYaniti(BaseModel):
