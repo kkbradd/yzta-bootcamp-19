@@ -596,6 +596,8 @@ python -m app.seed   # tek seferlik: örnek hat/araç/cihaz verisi
 
 - Backend: `http://localhost:8000`
 - Testler: `uv run pytest tests/unit` (birim), `uv run pytest tests/entegrasyon` (entegrasyon, çalışan bir stack gerektirir)
+- Python projelerinde `export UV_LOCKED=1` önerilir: `uv run` kilidi sessizce
+  güncellemek yerine uyuşmazlıkta hata verir (bkz. `backend/README.md`)
 
 **3) Sadece frontend — geliştirme (Vite dev server)**
 

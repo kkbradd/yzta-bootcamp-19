@@ -305,6 +305,24 @@ backend/
 
 Python `>=3.12`, paket yöneticisi `uv`. Bağımlılık kurulumu prod'da `uv sync --frozen --no-dev`, geliştirmede `uv sync`.
 
+### `uv.lock` kendiliğinden değişiyorsa
+
+Çıplak `uv run`, `pyproject.toml` ile `uv.lock` uyuşmuyorsa kilidi **sessizce
+güncelleyip** devam eder; her test koşusundan sonra ilgisiz bir dosya
+değişikliği kalır. Bu bir kez gerçek bir eksiği gizledi: `httpx` bağımlılığı
+`pyproject.toml`'a eklenmiş ama kilit güncellenmeden commit'lenmişti; `uv run`
+eksiği her seferinde kapatıyor, değişiklik gürültü sanılıp geri alınıyordu.
+
+Kabuğunuza ekleyin — kilit uyumsuzsa uv sessizce düzeltmek yerine hata verir:
+
+```bash
+export UV_LOCKED=1
+```
+
+Bağımlılık eklerken: `pyproject.toml`'ı düzenleyin, sonra `uv lock` çalıştırıp
+kilidi commit'e dahil edin. Kilidin güncelliğini `uv lock --check` doğrular.
+(Prod imajları zaten `uv sync --frozen` kullanıyor, bkz. `Dockerfile`.)
+
 ```bash
 # Sadece unit (altyapı GEREKMEZ — sahte/in-memory adaptörler + dependency_overrides)
 uv run pytest tests/unit

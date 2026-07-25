@@ -144,6 +144,11 @@ Diğer notlar:
 
 ## Test
 
+`export UV_LOCKED=1` önerilir: `uv run`, `pyproject.toml` ile `uv.lock`
+uyuşmadığında kilidi sessizce güncellemek yerine hata verir (gerekçe:
+`backend/README.md`). Bağımlılık eklerken `uv lock` çalıştırıp kilidi
+commit'e dahil edin.
+
 ```bash
 uv run pytest              # birim testler (ağ/model gerekmez, ~1 sn)
 uv run ruff check .
