@@ -1,62 +1,145 @@
-# Genel Bakış
+# YOTAY — Otobüs İçi Yoğunluk Tespiti
 
-**YOTAY — Otobüs İçi Yoğunluk Tespiti**, toplu taşıma araçlarına ve duraklara yerleştirilen kameralardan gelen görüntülerin görüntü işleme ile analiz edilerek araç/hat/durak bazlı yoğunluk tespiti yapılmasını hedefleyen bir projedir. Amaç, mevcut statik toplu taşıma yapısını daha dinamik ve veriye dayalı bir sisteme dönüştürmek; analiz sonuçlarını yöneticilerin karar süreçlerinde kullanabileceği bir admin panel üzerinden sunmak.
+Toplu taşımada bir otobüsün **şu an ne kadar dolu olduğunu** kamera görüntüsünden
+sayıp, hat bazında canlı takip edilebilir hâle getiren bir sistem. Üsküdar
+hatlarıyla çalışır.
 
-> **Not:** Bu site statik bir proje dokümanıdır. Belgelerdeki `localhost:8000/docs`
-> (Swagger), WebSocket ve MQTT adresleri yalnız sistemi yerelde/Docker ile
-> çalıştırdığınızda erişilebilir; bu sayfadan tıklandığında çalışmaz.
+Sorun şu: toplu taşıma planlaması büyük ölçüde **statiktir** — sefer sıklığı
+sabit tarifelere göre belirlenir, gerçek doluluk anlık olarak bilinmez. Yönetici
+hangi hatta ek araç gerektiğini ancak şikâyet geldikten sonra öğrenir.
 
-## Sistemdeki bileşenler
+YOTAY bunu tersine çevirir: araçtaki kamera görüntüsü **araç üzerinde** işlenir,
+yalnız kişi sayısı yayınlanır, panelde hat bazında canlı yoğunluk görünür ve
+lokal bir dil modeli veriyi yorumlayıp operatöre Türkçe anlatır.
 
+> **Bu site statik bir proje günlüğüdür.** Belgelerdeki `localhost` adresleri
+> (Swagger, WebSocket, MQTT) yalnız sistemi kendi makinenizde çalıştırdığınızda
+> açılır; bu sayfadan tıklandığında çalışmaz.
+
+---
+
+## Uçtan uca akış
+
+```mermaid
+graph LR
+    VIDEO[Kamera / video] --> CSRNET[CSRNet<br/>kişi sayımı]
+    CSRNET -->|MQTT| BACKEND[Backend<br/>ölçüm işleme]
+    BACKEND --> DB[(PostgreSQL<br/>geçmiş)]
+    BACKEND --> REDIS[(Redis<br/>anlık durum)]
+    BACKEND -->|WebSocket| PANEL[Panel]
+    BACKEND -->|REST| ASISTAN[Asistan<br/>lokal LLM]
+    ASISTAN --> PANEL
 ```
-edge cihazlar ──MQTT──▶ [ Backend ] ──REST + WebSocket──▶ panel (frontend)
-                          ▲     │                             │
-                          │     └──▶ [ AI öneri/uyarı motoru ]│
-                          │              (yerel LLM)          │
-                          │ REST (/api/hatlar...)             │ POST /chat
-                          └──────────── [ Asistan ] ◀─────────┘
-                                    (OpenJarvis + Ollama)
-```
 
-AI tarafı iki parçadır ve **ikisi de varsayılan olarak yereldir**: asistan soruları
-yanıtlar, öneri/uyarı motoru arka planda veriyi yorumlar. Her ikisinde de bulut
-(Gemini) yalnız açık tercihle devreye girer — bkz. [Öneri & Uyarı Motoru](ai-motoru.md).
+Bir ölçümün yolculuğu:
+
+1. **Araçta** — kameradan kare alınır, CSRNet kişi sayısını kestirir
+   (bkz. [Edge & CSRNet](edge-csrnet.md))
+2. **MQTT** — yalnız sayı yayınlanır, görüntü araçtan çıkmaz
+   (bkz. [MQTT Sözleşmesi](mqtt.md))
+3. **Backend** — ölçüm doğrulanır, doluluk oranı ve seviye hesaplanır, kaydedilir
+   (bkz. [Sistem Mimarisi](mimari.md))
+4. **Panel** — WebSocket ile anında görünür (bkz. [Ekran Görüntüleri](ekranlar.md))
+5. **Asistan** — operatör soru sorunca aynı veriyi araçlarla okuyup yanıtlar
+   (bkz. [Asistan](asistan.md))
+
+## Bileşenler
 
 | Bileşen | Ne yapar | Kod |
 |---|---|---|
-| **Edge** | Kameradan yoğunluk ölçümü üretip MQTT'ye yayınlar | `backend/simulator/simulator.py` (referans/sahte yayıncı) |
-| **Backend** | MQTT'den ölçüm alır, işler, REST + WebSocket ile sunar | `backend/app/` |
-| **Panel (frontend)** | Yöneticinin hat/durak/canlı harita verilerini izlediği arayüz | `frontend/src/` |
-| **Asistan** | Panelden gelen soruları backend verisiyle yanıtlayan lokal chatbot (OpenJarvis + Ollama) | `asistan/` — bkz. [Asistan](asistan.md) |
-| **AI öneri/uyarı motoru** | Yoğunluk örüntüsünü lokal modelle yorumlayıp operasyonel öneri ve uyarı üretir | `backend/app/adapters/cikan/` — bkz. [Öneri & Uyarı Motoru](ai-motoru.md) |
+| **Edge** | Videodan CSRNet ile kişi sayıp MQTT'ye yayınlar | `edge/` |
+| **Backend** | Ölçümü işler, saklar, REST + WebSocket ile sunar | `backend/app/` |
+| **Panel** | Hat/durak/canlı harita ekranları | `frontend/src/` |
+| **Asistan** | Soruları gerçek veriyle yanıtlayan lokal chatbot | `asistan/` |
+| **Öneri & uyarı motoru** | Yoğunluk örüntüsünü yorumlayıp öneri üretir | `backend/app/adapters/cikan/` |
+| **Simülatör** | Sahte cihazlarla canlı veri üretir (demo) | `backend/simulator/` |
 
-Tüm sistem tek komutla ayağa kalkar: depo kökünden `docker compose --profile demo up --build`
-(servisler: mosquitto, postgres, redis, backend, seed, ollama, asistan, frontend, simulator).
-Panel: `http://localhost:3000`.
+---
 
-## Bölümler
+## Gizlilik: neden lokal model?
 
-| Bölüm | Tür | İçerik |
-|---|---|---|
-| Genel Bakış | `.md` | Bu sayfa |
-| Görsel Özet | `.html` | Modelin ve veri setinin görsel özeti |
-| Sistem Mimarisi | `.md` | Heksagonal mimari, katmanlar, bağımlılık yönü |
-| REST & WebSocket | `.md` | API uç noktaları ve canlı mesaj şemaları |
-| MQTT Sözleşmesi | `.md` | Edge cihaz topic/payload sözleşmesi |
-| Asistan | `.md` | Panele bağlı lokal chatbot; tool'lar, `/chat`, Gemini modu |
-| Öneri & Uyarı Motoru | `.md` | Yoğunluğu yorumlayan AI motoru; motor seçimi, gizlilik, sağlamlık |
-| Ekran Görüntüleri | `.md` | Admin panelinin mevcut sayfaları |
+Sistemdeki **iki AI parçası da varsayılan olarak tamamen yereldir**. Bu bilinçli
+bir mimari karardır, sonradan eklenen bir özellik değil.
 
-## Yeni sayfa nasıl eklenir?
+**Görüntü araçtan çıkmaz.** CSRNet çıkarımı edge tarafında yapılır; MQTT'ye
+giden şey bir sayıdır (`{"kisi_sayisi": 23, ...}`). Yolcu görüntüsü ağ üzerinde
+hiç taşınmaz — sızdırılacak bir video akışı yoktur.
 
-1. Yeni dosyayı `docs/` klasörüne koy — `.md` ya da `.html` olabilir.
-2. `docs/index.html` içindeki `SAYFALAR` listesine bir satır ekle:
+**Yoğunluk verisi makineden çıkmaz.** Asistan ve öneri motoru
+[Ollama](https://ollama.com) üzerinde yerel model çalıştırır. Soru da, aracın
+döndürdüğü gerçek yoğunluk verisi de bilgisayarın dışına gitmez.
 
-```js
-{ baslik: "Mimari", dosya: "mimari.md" },
+Bulut (Gemini) desteği vardır ama **açık tercihle** devreye girer ve belgelerde
+uyarısı yazılıdır: o modda sorular *ve tool sonuçları* Google'a gider. Varsayılan
+kurulumda hiçbir bulut API'si çağrılmaz — internet olmadan da çalışır (modeller
+bir kez indikten sonra).
+
+Bunun bedeli var: küçük bir model (0.8B parametre) bulut modelleri kadar isabetli
+değil. Sistemi bu gerçeği **gizlemek yerine görünür kılacak** şekilde tasarladık —
+asistan hangi aracı çağırdığını söyler, çağırmadıysa cevabı "doğrulanmamış"
+olarak işaretler.
+
+---
+
+## OpenJarvis nedir?
+
+Asistan sıfırdan yazılmadı; [OpenJarvis](https://github.com/open-jarvis/OpenJarvis)
+adlı açık kaynak ajan çatısı üzerine kuruldu. Sağladıkları:
+
+| Parça | İşlevi |
+|---|---|
+| `OrchestratorAgent` | Modele soruyu verir, tool çağrılarını yürütür, cevabı toparlar |
+| `ToolExecutor` | Tool çağrılarını çalıştırır, hata/zaman aşımı yönetir |
+| `EventBus` | Ajanın **her adımını** olay olarak yayınlar |
+| `OllamaEngine` | Yerel modelle konuşur |
+
+`EventBus` bu proje için özellikle değerli: modelin hangi araca karar verdiği,
+hangi parametreyle çağırdığı ve aracın ham çıktısı canlı izlenebiliyor. Deneme
+ekranındaki **EventBus sekmesi** bunun üzerine kurulu — küçük modelin ne zaman
+uydurduğunu gözle görmeyi sağlıyor.
+
+> OpenJarvis depoda **SHA-pinli** kuruludur (`8b59eb8`). Sebep: `OrchestratorAgent`'ın
+> `system_prompt` parametresi function-calling modunda yok sayılıyor (yukarı akış
+> hatası); geçici çözüm bu sürüme göre yazıldı. Ayrıntı: [Asistan](asistan.md).
+
+---
+
+## Hızlı başlangıç
+
+Docker Desktop kuruluysa tek komut:
+
+```bash
+git clone https://github.com/kkbradd/yzta-bootcamp-19
+cd yzta-bootcamp-19
+docker compose --profile demo up --build
 ```
 
-Hepsi bu. Menüde otomatik görünür.
+- Panel: `http://localhost:3000`
+- Backend API + Swagger: `http://localhost:8000/docs`
+- Asistan servisi: `http://localhost:8100`
 
-> **Not:** Markdown sayfaları tarayıcıda doğrudan dosya olarak açıldığında yüklenmez;
-> yerelde `python3 -m http.server` ile önizle. GitHub Pages'te sorunsuz çalışır.
+**İlk açılış ~10–15 dakika sürer** — Ollama dil modelini (~1 GB) indirir. Model
+kalıcı bir volume'da kalır, sonraki açılışlar hızlıdır. Docker'a en az **8 GB**
+bellek ayrılması önerilir.
+
+Kod okumadan asistanı denemek için depodaki `docs/asistan-deneme.html` dosyasına
+çift tıklamanız yeterli — bkz. [Asistan Deneme Sayfası](asistan-deneme.html).
+
+| Profil | Ne çalışır | Şart |
+|---|---|---|
+| `demo` | Sohbet, araçlar, simülatörden canlı veri | Yok |
+| `gercek` | Yukarıdakiler **+ videodan gerçek CSRNet sayımı** | `edge/videolar/otobus.mp4` |
+
+---
+
+## Teknoloji
+
+| Katman | Seçim |
+|---|---|
+| Kişi sayımı | CSRNet (ShanghaiTech Part B), PyTorch, CPU |
+| Backend | Python 3.12, FastAPI, heksagonal mimari |
+| Veri | PostgreSQL (geçmiş), Redis (anlık durum, TTL) |
+| Mesajlaşma | MQTT (Mosquitto), QoS 1, LWT |
+| Panel | React, Vite, Recharts, Leaflet |
+| AI | Ollama + Qwen 3.5, OpenJarvis ajan çatısı |
+| Dağıtım | Docker Compose (tek komut) |
