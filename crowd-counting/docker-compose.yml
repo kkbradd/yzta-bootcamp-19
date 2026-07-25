@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  csrnet:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: csrnet_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    # PyTorch DataLoader'ların (num_workers > 0) paylaşılan bellek (shared memory) 
+    # yetersizliğinden çökmesini önlemek için shm_size artırılmıştır.
+    shm_size: '2gb'
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONIOENCODING=utf-8
+      # Google Drive Model Ağırlıkları Klasör Linki
+      - DRIVE_FOLDER_URL=https://drive.google.com/drive/folders/1Ak4ef-kgtZT9avwjbBETAjZ8q5PZZIxP
+    # NVIDIA GPU kartlarını konteynere tahsis eder.
+    # Not: Host sistemde 'nvidia-container-toolkit' kurulu olmalıdır.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

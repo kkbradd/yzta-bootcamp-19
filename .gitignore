@@ -1,2 +1,8 @@
 # Docker Compose'un kökten okuduğu değişkenler (GEMINI_API_KEY gibi gizli anahtarlar).
 .env
+
+# Model Weights & Temp files
+*.pth.tar
+*.h5
+__pycache__/
+*_results/
