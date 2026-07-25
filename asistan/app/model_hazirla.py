@@ -17,23 +17,29 @@ logger = logging.getLogger(__name__)
 CEKME_ZAMAN_ASIMI_SN = 1800.0
 
 
-def _mevcut_modeller(istemci: httpx.Client) -> list[str]:
+def mevcut_modeller(istemci: httpx.Client) -> list[str]:
+    """Ollama'da çekilmiş model adları."""
     yanit = istemci.get("/api/tags")
     yanit.raise_for_status()
     return [model["name"] for model in yanit.json().get("models", [])]
 
 
-def model_hazirla(model: str, istemci: httpx.Client) -> None:
-    if model in _mevcut_modeller(istemci):
-        logger.info("Model zaten hazır: %s", model)
-        return
-    logger.info("Model çekiliyor (ilk açılışta uzun sürebilir): %s", model)
+def model_indir(model: str, istemci: httpx.Client) -> None:
+    """Modeli çeker; zaten varsa Ollama isteği hızlıca döner."""
     yanit = istemci.post(
         "/api/pull",
         json={"name": model, "stream": False},
         timeout=CEKME_ZAMAN_ASIMI_SN,
     )
     yanit.raise_for_status()
+
+
+def model_hazirla(model: str, istemci: httpx.Client) -> None:
+    if model in mevcut_modeller(istemci):
+        logger.info("Model zaten hazır: %s", model)
+        return
+    logger.info("Model çekiliyor (ilk açılışta uzun sürebilir): %s", model)
+    model_indir(model, istemci)
 
 
 def hazirlik_yap(ayarlar: Ayarlar, istemci_kur: Callable[[], httpx.Client]) -> None:

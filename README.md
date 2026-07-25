@@ -87,11 +87,48 @@ Varsayılan kurulumda hiçbir veri makineden çıkmaz. Tek komutla çalıştırm
 ```bash
 docker compose --profile demo up --build
 # Panel: http://localhost:3000 — sağ alttaki 💬 düğmesi sohbeti açar.
+# Deneme ekranı: http://localhost:3000/#asistan (oturum gerektirmez)
 
 # Ya da doğrudan API'den:
 curl -X POST localhost:8100/chat -H "Content-Type: application/json" \
      -d '{"mesaj": "Şu an hatlarda yoğunluk nasıl?"}'
 ```
+
+**Ekip içi deneme ekranı** (`/#asistan`): panelden bağımsız, oturum istemeyen bir test
+alanı. Her cevabın altında asistanın hangi tool'ları çağırdığı, hangi modelin cevapladığı
+ve kaç saniye sürdüğü görünür — tool çağırma davranışı küçük modelde prompt'a duyarlı
+olduğu için takım arkadaşları değişikliklerin etkisini burada gözleyebilir.
+
+**Model seçimi:** Ekranın üstünden model değiştirilebilir. Varsayılan `qwen3.5:0.8b`
+konteyner açılışında indirilir ve hemen kullanıma hazırdır; daha büyük modeller
+listelenir ama **yalnız istendiğinde** indirilir (`indir` düğmesi, birkaç dakika sürer).
+İndirilen modeller `ollama_modelleri` volume'unda kalıcıdır — bir kez indirilen model
+sonraki açılışlarda hazırdır.
+
+| Model | Boyut | Durum |
+|-------|-------|-------|
+| `qwen3.5:0.8b` | ~1 GB | Varsayılan, açılışta indirilir |
+| `qwen3.5:1.7b` | ~1.4 GB | İstendiğinde indirilir |
+| `qwen3.5:4b` | ~2.6 GB | İstendiğinde indirilir |
+| `llama3.2:3b` | ~2 GB | İstendiğinde indirilir |
+
+> Model listesi bilinçli olarak küçük tutuldu: 8B üstü modeller CPU'da tool çağırmayı
+> dakikalar süren bir işe çeviriyor. Servis yalnız bu listedeki adları kabul eder —
+> serbest model adı keyfi indirme tetikleyebilirdi.
+
+**Asistanın araçları:**
+
+| Tool | Ne yapar | Kaynak |
+|------|----------|--------|
+| `hat_yogunluklari` | Tüm hatların anlık doluluğu | Backend REST |
+| `hat_anlik_durum` | Bir hattaki araçların durumu | Backend REST |
+| `hat_trend` | Hattın saatlik seyri | Backend REST |
+| `yogunluk_tahmini` | Hava + saat ile doluluk tahmini | Yerel joblib modeli |
+
+> `yogunluk_tahmini` bir **demo modelidir**: sentetik veriyle eğitilmiştir (gerçek
+> veride hava/saat ↔ doluluk ilişkisi bulunamamış, R²~0). Tool çıktısı bu yüzden her
+> zaman "tahmindir, gerçek ölçüm değildir" notu taşır. Model dosyası yoksa asistan
+> diğer üç araçla çalışmaya devam eder.
 
 Cevap kalitesi yetmezse opsiyonel olarak Gemini'ye geçilebilir (`ASISTAN_MOTOR=cloud`
 + `GEMINI_API_KEY`); bu modda veriler Google'a gider, bkz.

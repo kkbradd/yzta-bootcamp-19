@@ -23,7 +23,8 @@ from app.ayarlar import AZAMI_TOKEN, AZAMI_TUR, SICAKLIK, Ayarlar
 # Genişletmeden önce docs'taki varyant testini tekrarla.
 SISTEM_PROMPTU = (
     "Sen YOTAY asistanısın. Yoğunluk/hat/araç sorularında MUTLAKA önce uygun tool'u çağır "
-    "(hat_yogunluklari, hat_anlik_durum, hat_trend). Tool sonucu olmadan cevap verme."
+    "(hat_yogunluklari, hat_anlik_durum, hat_trend, yogunluk_tahmini). "
+    "Tool sonucu olmadan cevap verme."
 )
 
 
@@ -36,6 +37,7 @@ class AsistanCevabi:
     cevap: str
     tur_sayisi: int
     arac_cagrilari: list[str]
+    model: str = ""
 
 
 class Ureten(Protocol):
@@ -47,7 +49,7 @@ class Ureten(Protocol):
 class Soran(Protocol):
     """HTTP katmanının asistandan beklediği sözleşme."""
 
-    def sor(self, mesaj: str) -> AsistanCevabi: ...
+    def sor(self, mesaj: str, model: str | None = None) -> AsistanCevabi: ...
 
 
 def _sistem_baglami() -> AgentContext:
@@ -105,10 +107,15 @@ class YotayAsistani:
         kaynak = YotayVeriKaynagi.adresten(ayarlar.yotay_api_adresi)
         return cls(ayarlar, motor=_motor_kur(ayarlar), araclar=varsayilan_araclar(kaynak))
 
-    def sor(self, mesaj: str) -> AsistanCevabi:
+    def sor(self, mesaj: str, model: str | None = None) -> AsistanCevabi:
+        """Soruyu yanıtlar; `model` verilirse o modelle, yoksa varsayılanla.
+
+        Model adı ajan başına verilir (motor bağlantısı ortaktır), böylece deneme
+        ekranı aynı serviste farklı modelleri karşılaştırabilir.
+        """
         vekil = OrchestratorAgent(
             self._motor,
-            self._ayarlar.model,
+            model or self._ayarlar.model,
             tools=self._araclar,
             max_turns=AZAMI_TUR,
             temperature=SICAKLIK,
@@ -119,4 +126,5 @@ class YotayAsistani:
             cevap=sonuc.content,
             tur_sayisi=sonuc.turns,
             arac_cagrilari=[arac.tool_name for arac in sonuc.tool_results],
+            model=model or self._ayarlar.model,
         )

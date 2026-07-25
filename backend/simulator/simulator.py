@@ -6,6 +6,11 @@ N sahte cihaz, periyodik olarak gerçekçi kişi sayıları üretip MQTT'ye yay�
   python simulator/simulator.py --cihaz 3                 # 3 cihaz, 5 sn periyot
   python simulator/simulator.py --cihaz 1 --tunel 60      # 60 sn tünel modu
   python simulator/simulator.py --periyot 2 --broker localhost
+  python simulator/simulator.py --cihaz 6 --atla 1        # edge_0001 hariç (gerçek edge yayınlıyor)
+
+Karma demo: gerçek edge servisi bir cihaz adına yayın yaparken simülatör aynı
+cihazı --atla ile dışarıda bırakır. İkisi de yayınlarsa sira_no'lar aynı saat
+tohumundan üretildiği için ölçümler UNIQUE(cihaz_id, sira_no) ile yutulur.
 
 Tünel modu: cihaz --tunel saniyesi boyunca yayın yapmaz (4G kesintisi taklidi),
 ölçümleri çekim damgalarıyla biriktirir; süre dolunca hepsini artan sira_no ile
@@ -30,6 +35,10 @@ logger = logging.getLogger("simulator")
 
 YAZILIM_SURUMU = "1.2.0"
 TABAN_KAPASITE = 90  # üretilen sayılar bu ölçeğe göre salınır
+
+
+class SimulatorAyarHatasi(ValueError):
+    """Argümanlar tutarsız — yığın izi yerine tek satır hata basılır."""
 
 
 def _gerceklesen_sayi(cihaz_no: int, an: float) -> int:
@@ -96,12 +105,30 @@ async def cihaz_calistir(
             await asyncio.sleep(periyot)
 
 
+def yayinlanacak_cihazlar(cihaz_sayisi: int, atlanacaklar: set[int]) -> list[int]:
+    """1..N aralığından atlanacak cihaz numaralarını çıkarır."""
+    return [no for no in range(1, cihaz_sayisi + 1) if no not in atlanacaklar]
+
+
 async def calistir(argumanlar: argparse.Namespace) -> None:
+    atlanacaklar = set(argumanlar.atla)
+    cihaz_numaralari = yayinlanacak_cihazlar(argumanlar.cihaz, atlanacaklar)
+    if not cihaz_numaralari:
+        raise SimulatorAyarHatasi(
+            f"--atla tüm cihazları dışarıda bıraktı (--cihaz {argumanlar.cihaz}); "
+            "yayınlanacak cihaz kalmadı."
+        )
+    if atlanacaklar:
+        logger.info(
+            "atlanan cihazlar: %s (gerçek edge servisi yayınlıyor varsayılıyor)",
+            ", ".join(f"edge_{no:04d}" for no in sorted(atlanacaklar)),
+        )
+
     gorevler = [
         cihaz_calistir(
             cihaz_no, argumanlar.broker, argumanlar.port, argumanlar.periyot, argumanlar.tunel
         )
-        for cihaz_no in range(1, argumanlar.cihaz + 1)
+        for cihaz_no in cihaz_numaralari
     ]
     await asyncio.gather(*gorevler)
 
@@ -113,6 +140,14 @@ def _argumanlari_ayristir() -> argparse.Namespace:
     ayristirici.add_argument(
         "--tunel", type=float, default=0.0, help="başlangıçta tünel modu süresi (sn)"
     )
+    ayristirici.add_argument(
+        "--atla",
+        type=int,
+        nargs="*",
+        default=[],
+        metavar="CIHAZ_NO",
+        help="yayın yapılmayacak cihaz numaraları (ör. --atla 1: edge_0001 gerçek edge'e bırakılır)",
+    )
     ayristirici.add_argument("--broker", default="localhost")
     ayristirici.add_argument("--port", type=int, default=1883)
     return ayristirici.parse_args()
@@ -122,5 +157,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:
         asyncio.run(calistir(_argumanlari_ayristir()))
+    except SimulatorAyarHatasi as hata:
+        logger.error("%s", hata)
+        raise SystemExit(1) from hata
     except KeyboardInterrupt:
         logger.info("simülatör durduruldu")

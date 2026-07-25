@@ -68,44 +68,63 @@ HAT_DESENLERI = {
 
 _HAFTA_SONU = (0, 6)
 
+# Saatlik doluluk çarpanları (indis = 0..23). İBB Saatlik Toplu Ulaşım Veri
+# Seti'nden (BELBİM akbil işlemleri) türetildi: 5 tam iş günü (Ekim 2024) ve
+# bir Pazar (1 Eylül 2024) üzerinden Üsküdar hatlarının biniş dağılımı
+# hesaplandı, ardından iki düzeltme uygulandı:
+#   1. Akış → stok yumuşatma: kart basma binişi ölçer, doluluk ise araç
+#      içindekidir — komşu saatlerle harmanlandı (0.25/0.55/0.20).
+#   2. Gece tabanı 0.06: Üsküdar'da gece hattı var (11ÜS), araçlar boş değil.
+# Zirve 1.15 = oturma kapasitesinin %15 üstü (ayakta yolcu).
+# Kaynak: https://data.ibb.gov.tr/dataset/hourly-public-transport-data-set
+HAFTA_ICI_CARPANLARI = (
+    0.06, 0.06, 0.06, 0.06, 0.06, 0.18, 0.62, 1.15, 1.15, 0.84, 0.67, 0.67,
+    0.75, 0.83, 0.91, 1.07, 1.14, 1.11, 1.03, 0.83, 0.56, 0.38, 0.26, 0.14,
+)
+# Hafta sonu yalnızca ölçeklenmiş bir iş günü DEĞİLDİR: sabah zirvesi tamamen
+# kaybolur, tek bir öğleden sonra tümseği kalır (Pazar toplamı iş gününün ~%45'i).
+HAFTA_SONU_CARPANLARI = (
+    0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.11, 0.18, 0.24, 0.25, 0.26, 0.31,
+    0.41, 0.46, 0.49, 0.50, 0.52, 0.54, 0.53, 0.49, 0.41, 0.31, 0.23, 0.13,
+)
+
+# Hattın kendi yoğun penceresinde uygulanan ek ağırlık: desen farkı korunur,
+# aksi halde tüm hatlar aynı eğriyi izler ve öneri motoru hatlar arası
+# belirgin sapma bulamaz (bkz. _karsilastirma_ekle).
+_DESEN_ICI_AGIRLIK = 1.25
+_DESEN_DISI_AGIRLIK = 0.80
+
+# seed.py'deki araç kapasitesiyle aynı olmalı: çarpanlar kişi sayısına bu
+# kapasite üzerinden çevrilir.
+ARAC_KAPASITESI = 60
+# Ayakta yolcuyla kapasite aşılabilir (İETT solo otobüs toplam kapasitesi 100'e
+# kadar çıkar); üst sınır kasıtlı olarak kapasitenin üstünde tutuldu.
+_AZAMI_KISI = 90
+
+
+def _saat_carpani(zaman: datetime) -> float:
+    carpanlar = HAFTA_SONU_CARPANLARI if _dow(zaman) in _HAFTA_SONU else HAFTA_ICI_CARPANLARI
+    return carpanlar[zaman.hour]
+
 
 def _dow(zaman: datetime) -> int:
     """PostgreSQL EXTRACT(DOW) ile birebir: 0=Pazar..6=Cumartesi. weekday() KULLANMA."""
     return zaman.isoweekday() % 7
 
 
-def _kisi_sayisi_uret(zaman: datetime, desen: dict) -> int:
-    """Saat + gün + hattın yoğunluk desenine göre gerçekçi kişi sayısı üretir."""
-    saat = zaman.hour
-    gun_no = _dow(zaman)
-
-    yogun_mu = False
+def _desen_yogun_mu(zaman: datetime, desen: dict) -> bool:
+    """Hattın kendi yoğunluk penceresinde miyiz?"""
     if desen["tip"] == "saat":
-        yogun_mu = desen["baslangic"] <= saat < desen["bitis"]
-        # Saat-bazlı hatlarda hafta sonu yoğunluğu bir kademe düşürülür —
-        # aksi halde her gün aynı davrandığından günler-arası karşılaştırma
-        # (_karsilastirma_ekle) sıfıra yakın fark bulur ve öneri motoru
-        # BELIRGIN_SAPMA_ESIGI eşiğini hiç geçemez.
-        if yogun_mu and gun_no in _HAFTA_SONU:
-            temel_alt, temel_ust = 20, 45
-        elif yogun_mu:
-            temel_alt, temel_ust = 55, 75
-        elif 7 <= saat < 22:
-            temel_alt, temel_ust = 20, 45
-        else:
-            temel_alt, temel_ust = 5, 20
-    else:  # "gun"
-        yogun_mu = gun_no in desen["gunler"] and 7 <= saat < 21
-        if yogun_mu:
-            temel_alt, temel_ust = 55, 75
-        elif 7 <= saat < 22:
-            temel_alt, temel_ust = 20, 45
-        else:
-            temel_alt, temel_ust = 5, 20
+        return desen["baslangic"] <= zaman.hour < desen["bitis"]
+    return _dow(zaman) in desen["gunler"] and 7 <= zaman.hour < 21
 
-    temel = random.randint(temel_alt, temel_ust)
-    gurultulu = round(temel * random.uniform(0.9, 1.1))
-    return max(0, min(90, gurultulu))  # 90: kasıtlı aşırı-doluluk üst sınırı (kapasite 60'ın üstü de olabilir)
+
+def _kisi_sayisi_uret(zaman: datetime, desen: dict) -> int:
+    """İBB saatlik eğrisi × hat deseni × gürültü ile gerçekçi kişi sayısı üretir."""
+    agirlik = _DESEN_ICI_AGIRLIK if _desen_yogun_mu(zaman, desen) else _DESEN_DISI_AGIRLIK
+    oran = _saat_carpani(zaman) * agirlik * random.uniform(0.88, 1.12)
+    kisi = round(oran * ARAC_KAPASITESI)
+    return max(0, min(_AZAMI_KISI, kisi))
 
 
 def _gun_sefer_zamanlarini_uret(gun_baslangici: datetime) -> list[datetime]:

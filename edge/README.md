@@ -66,6 +66,23 @@ okluzyonlu otobüs içi görüntüsü **dağılım dışıdır** ve sistematik s
 Birkaç kareyi elle sayıp `EDGE_SAYIM_CARPANI` ile ölçeği düzeltin. Ham sayım da
 loglanır (`DEBUG` seviyesinde), böylece çarpanın etkisi ayırt edilebilir.
 
+### Ölçülen kalibrasyon (otobus.mp4)
+
+45 saniyelik demo videosunun her saniyesi elle sayılıp (referans: ortalama 4.1,
+en fazla 8 kişi) CSRNet ham çıktısıyla karşılaştırıldı:
+
+| Ölçüt | Değer |
+|-------|-------|
+| Korelasyon (ham ↔ gerçek) | **0.88** |
+| Ham sayım ortalaması | 5.43 (gerçek: 4.11 — sistematik fazla sayım) |
+| MAE, çarpansız | 1.64 kişi |
+| MAE, çarpan uygulanmış | **1.06 kişi** |
+| En küçük kareler çarpanı | **0.78** |
+
+Bu yüzden `docker-compose.yml`'de varsayılan `EDGE_SAYIM_CARPANI=0.78`. Model
+insan sayısındaki *değişimi* doğru takip ediyor (yüksek korelasyon), yalnız ölçeği
+kayıktı. **Başka bir video veya kamera açısı için yeniden ölçülmelidir.**
+
 `edge_0001` seed'de **kapasite 90** olan `34 HAT 001` aracına atanmıştır; seviye
 eşikleri bu kapasiteye göre: **<36** seyrek, **36–63** orta, **>63** yoğun.
 

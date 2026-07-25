@@ -18,6 +18,9 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --extra gemini --no-install-project
 
 COPY app ./app
+# Doluluk tahmin modeli (joblib): app dışında olduğu için ayrıca kopyalanmalı,
+# yoksa yogunluk_tahmini aracı konteynerde sessizce devre dışı kalır.
+COPY model ./model
 RUN uv sync --frozen --no-dev --extra gemini
 
 ENV PATH="/uygulama/.venv/bin:$PATH"
