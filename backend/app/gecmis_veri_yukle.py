@@ -76,6 +76,7 @@ _HAFTA_SONU = (0, 6)
 #      içindekidir — komşu saatlerle harmanlandı (0.25/0.55/0.20).
 #   2. Gece tabanı 0.06: Üsküdar'da gece hattı var (11ÜS), araçlar boş değil.
 # Zirve 1.15 = oturma kapasitesinin %15 üstü (ayakta yolcu).
+# Tam yöntem, seçilen günler ve bilinen sınırlar: docs/veri-metodolojisi.md
 # Kaynak: https://data.ibb.gov.tr/dataset/hourly-public-transport-data-set
 HAFTA_ICI_CARPANLARI = (
     0.06, 0.06, 0.06, 0.06, 0.06, 0.18, 0.62, 1.15, 1.15, 0.84, 0.67, 0.67,

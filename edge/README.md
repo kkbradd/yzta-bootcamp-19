@@ -83,6 +83,8 @@ Bu yüzden `docker-compose.yml`'de varsayılan `EDGE_SAYIM_CARPANI=0.78`. Model
 insan sayısındaki *değişimi* doğru takip ediyor (yüksek korelasyon), yalnız ölçeği
 kayıktı. **Başka bir video veya kamera açısı için yeniden ölçülmelidir.**
 
+Ölçüm yöntemi ve bilinen sınırlar: [docs/veri-metodolojisi.md](../docs/veri-metodolojisi.md)
+
 `edge_0001` seed'de **kapasite 90** olan `34 HAT 001` aracına atanmıştır; seviye
 eşikleri bu kapasiteye göre: **<36** seyrek, **36–63** orta, **>63** yoğun.
 

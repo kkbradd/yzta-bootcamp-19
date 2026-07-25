@@ -140,6 +140,44 @@ Ayrıntılar: [asistan/README.md](asistan/README.md)
 
 ---
 
+<details>
+  <summary><h2>Veri Metodolojisi</h2></summary>
+
+Sistemdeki sayılar tahminle değil ölçümle belirlendi. İki ayrı kalibrasyon var:
+
+**1. Mock yoğunluk eğrisi — İBB açık verisinden.** Demo verisinin saatlik doluluk
+çarpanları uydurulmadı; [İBB Saatlik Toplu Ulaşım Veri Seti](https://data.ibb.gov.tr/dataset/hourly-public-transport-data-set)
+(BELBİM akbil işlemleri) indirilip 5 tam iş günü (Ekim 2024) ve bir Pazar (Eylül 2024)
+üzerinden **171.438 Üsküdar binişi** toplulaştırıldı.
+
+Veriden çıkan üç bulgu tasarımı doğrudan etkiledi:
+
+- **07:00 günün en yoğun saati** (Üsküdar binişlerinin %9.6'sı) — sabah zirvesi keskin
+- **Akşam 15:00–18:00 bir plato**, sivri tepe değil; saat başına daha az yoğun ama
+  toplamda sabah zirvesinden **daha fazla yolcu** taşıyor
+- **Hafta sonu "ölçeklenmiş iş günü" değil**: Pazar toplamı iş gününün ~%45'i ama
+  sabah zirvesi **tamamen kayboluyor** (07:00'de 0.18 ↔ 1.15, ~6 kat fark)
+
+**2. CSRNet sayım ölçeği — elle sayımla.** Demo videosunun 45 saniyesinin her biri elle
+sayılıp modelin ham çıktısıyla karşılaştırıldı:
+
+| Ölçüt | Değer |
+|---|---|
+| Korelasyon (ham ↔ gerçek) | **0.88** |
+| MAE, çarpansız → kalibre | 1.64 → **1.06 kişi** |
+| `EDGE_SAYIM_CARPANI` | **0.78** |
+
+Model insan sayısındaki *değişimi* doğru takip ediyor; yalnız ölçeği kayıktı.
+
+> Tam yöntem, seçilen günler, uygulanan düzeltmeler ve **bilinen sınırlar** (zirve
+> değeri 1.15 ölçülmüş bir doluluk değil, kalibre edilmiş bir seçimdir; hafta sonu
+> eğrisi tek bir Pazara dayanır):
+> **[docs/veri-metodolojisi.md](docs/veri-metodolojisi.md)**
+
+</details>
+
+---
+
 ![Sprint 1](assets/sprint1/Spr%C4%B1nt%201.png)
 
 <details>
