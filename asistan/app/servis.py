@@ -5,14 +5,25 @@ sahte asistan üreten bir fabrika vererek modeli/ağı devre dışı bırakır.
 """
 
 import logging
+import queue
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
+import anyio
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from openjarvis.core.events import EventBus
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.akis import (
+    BITTI,
+    bitti_paketi,
+    hata_paketi,
+    kuyruga_abone_ol,
+    olay_paketi,
+)
 from app.ayarlar import SECILEBILIR_MODEL_ADLARI, SECILEBILIR_MODELLER, Ayarlar
 from app.cekirdek import Soran, YotayAsistani
 from app.model_hazirla import CEKME_ZAMAN_ASIMI_SN, mevcut_modeller, model_indir
@@ -76,6 +87,7 @@ def uygulama_olustur(
         allow_headers=["*"],
     )
     uygulama.post("/chat")(_sohbet)
+    uygulama.post("/chat/akis")(_sohbet_akisi)
     uygulama.get("/modeller")(_modelleri_listele)
     uygulama.post("/modeller/indir")(_modeli_indir)
     uygulama.get("/saglik")(_saglik)
@@ -98,6 +110,64 @@ def _sohbet(istek: SohbetIstegi, request: Request) -> SohbetYaniti:
     model = _modeli_dogrula(istek.model)
     cevap = request.app.state.asistan.sor(istek.mesaj, model=model)
     return SohbetYaniti.model_validate(cevap)
+
+
+async def _sohbet_akisi(istek: SohbetIstegi, request: Request) -> StreamingResponse:
+    """Ajanın her adımını SSE olarak akıtır (bkz. app/akis.py)."""
+    model = _modeli_dogrula(istek.model)
+    asistan = request.app.state.asistan
+    if not hasattr(asistan, "akit"):
+        raise HTTPException(status_code=501, detail="Bu asistan olay akışı desteklemiyor.")
+
+    return StreamingResponse(
+        _olaylari_uret(asistan, istek.mesaj, model),
+        media_type="text/event-stream",
+        # Proxy arkasında tamponlama akışı öldürür; nginx bu başlığı tanır.
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _olaylari_uret(asistan, mesaj: str, model: str | None) -> AsyncIterator[str]:
+    """Ajanı ayrı thread'de koşturup olayları kuyruktan SSE'ye çevirir.
+
+    Bus istek başınadır: paylaşımlı olsaydı eşzamanlı iki istek birbirinin
+    olaylarını görürdü ve olayda istek kimliği olmadığı için ayrıştırılamazdı.
+    """
+    bus = EventBus()
+    kuyruk: queue.Queue = queue.Queue()
+    abonelikleri_birak = kuyruga_abone_ol(bus, kuyruk)
+    sonuclar: dict = {}
+
+    def calistir() -> None:
+        try:
+            sonuclar["cevap"] = asistan.akit(mesaj, bus, model=model)
+        except Exception as hata:  # akış ortasında HTTP kodu değişemez
+            sonuclar["hata"] = hata
+        finally:
+            # Nöbetçi olmazsa run() patladığında üreteç sonsuza dek beklerdi.
+            kuyruk.put(BITTI)
+
+    try:
+        async with anyio.create_task_group() as gorevler:
+            gorevler.start_soon(anyio.to_thread.run_sync, calistir)
+            while True:
+                # abandon_on_cancel: istemci koparsa bağlantı kapanışı run()'ın
+                # bitmesini beklemesin (CPU'da model dakikalarca sürebilir).
+                olay = await anyio.to_thread.run_sync(kuyruk.get, abandon_on_cancel=True)
+                if olay is BITTI:
+                    break
+                yield olay_paketi(olay)
+        yield _kapanis_paketi(sonuclar)
+    finally:
+        abonelikleri_birak()
+
+
+def _kapanis_paketi(sonuclar: dict) -> str:
+    hata = sonuclar.get("hata")
+    if hata is not None:
+        logger.warning("akış sırasında hata: %s", hata)
+        return hata_paketi(hata)
+    return bitti_paketi(sonuclar["cevap"])
 
 
 def _ollama_istemcisi(request: Request, zaman_asimi_sn: float = 30.0) -> httpx.Client:

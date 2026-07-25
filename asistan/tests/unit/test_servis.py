@@ -1,8 +1,12 @@
 """HTTP servisi birim testleri — TestClient + sahte asistan, model/ağ yok."""
 
+import json
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+
+from openjarvis.core.events import EventType
 
 from app.ayarlar import SECILEBILIR_MODEL_ADLARI, AyarHatasi
 from app.cekirdek import AsistanCevabi
@@ -176,3 +180,85 @@ def test_listede_olmayan_model_indirilemez():
         yanit = istemci.post("/modeller/indir", json={"model": "llama3:70b"})
 
     assert yanit.status_code == 400
+
+
+# ---- SSE akış ucu ----
+#
+# DİKKAT: TestClient akışı TAMPONLAR — olaylar istemciye sonda topluca ulaşır.
+# Bu testler sıra ve içerik doğrular, ZAMANLAMA DOĞRULAYAMAZ. Artımlı akışın
+# gerçekten çalıştığı uvicorn'da `curl -N` ile doğrulanır (bkz. README).
+
+
+class SahteAkitanAsistan(SahteAsistan):
+    """`akit` yeteneği olan sahte: model/ağ olmadan deterministik olay üretir."""
+
+    def akit(self, mesaj, bus, model=None):
+        bus.publish(EventType.AGENT_TURN_START, {"agent": "orchestrator"})
+        bus.publish(EventType.TOOL_CALL_END, {"tool": "hat_yogunluklari", "success": True})
+        return self.sor(mesaj, model=model)
+
+
+class PatlayanAsistan(SahteAsistan):
+    def akit(self, mesaj, bus, model=None):
+        bus.publish(EventType.AGENT_TURN_START, {"agent": "orchestrator"})
+        raise RuntimeError("motor kapalı")
+
+
+def _olaylari_topla(yanit) -> list[tuple[str, str]]:
+    olaylar, ad = [], None
+    for satir in yanit.iter_lines():
+        if satir.startswith("event: "):
+            ad = satir[len("event: ") :]
+        elif satir.startswith("data: ") and ad is not None:
+            olaylar.append((ad, satir[len("data: ") :]))
+            ad = None
+    return olaylar
+
+
+def test_akis_olaylari_ve_bitti_doner():
+    sahte = SahteAkitanAsistan()
+    with _istemci(sahte) as istemci, istemci.stream(
+        "POST", "/chat/akis", json={"mesaj": "en yogun hat?"}
+    ) as yanit:
+        assert yanit.status_code == 200
+        assert yanit.headers["content-type"].startswith("text/event-stream")
+        olaylar = _olaylari_topla(yanit)
+
+    adlar = [ad for ad, _ in olaylar]
+    assert adlar == ["agent_turn_start", "tool_call_end", "bitti"]
+    son = json.loads(olaylar[-1][1])
+    assert son["cevap"] == "34 hattı şu an orta yoğunlukta."
+    assert son["arac_cagrilari"] == ["hat_yogunluklari"]
+
+
+def test_akis_hatasi_olay_olarak_gelir():
+    """Akış başladıktan sonra HTTP kodu değişemez; hata da bir olaydır."""
+    with _istemci(PatlayanAsistan()) as istemci, istemci.stream(
+        "POST", "/chat/akis", json={"mesaj": "selam"}
+    ) as yanit:
+        assert yanit.status_code == 200
+        olaylar = _olaylari_topla(yanit)
+
+    assert olaylar[-1][0] == "hata"
+    assert "motor kapalı" in json.loads(olaylar[-1][1])["mesaj"]
+
+
+def test_akit_desteklemeyen_asistan_501_doner():
+    with _istemci(SahteAsistan()) as istemci:
+        yanit = istemci.post("/chat/akis", json={"mesaj": "selam"})
+
+    assert yanit.status_code == 501
+
+
+def test_akista_listede_olmayan_model_reddedilir():
+    with _istemci(SahteAkitanAsistan()) as istemci:
+        yanit = istemci.post("/chat/akis", json={"mesaj": "selam", "model": "llama3:70b"})
+
+    assert yanit.status_code == 400
+
+
+def test_akista_bos_mesaj_reddedilir():
+    with _istemci(SahteAkitanAsistan()) as istemci:
+        yanit = istemci.post("/chat/akis", json={"mesaj": ""})
+
+    assert yanit.status_code == 422

@@ -95,9 +95,24 @@ curl -X POST localhost:8100/chat -H "Content-Type: application/json" \
 ```
 
 **Ekip içi deneme ekranı** (`/#asistan`): panelden bağımsız, oturum istemeyen bir test
-alanı. Her cevabın altında asistanın hangi tool'ları çağırdığı, hangi modelin cevapladığı
-ve kaç saniye sürdüğü görünür — tool çağırma davranışı küçük modelde prompt'a duyarlı
-olduğu için takım arkadaşları değişikliklerin etkisini burada gözleyebilir.
+alanı. **İki sekmesi** var:
+
+- **💬 Sohbet** — normal chatbot görünümü. Her cevabın altında çağrılan tool'lar, model
+  ve süre görünür. Tool çağrılmadan gelen cevaplar *"araç kullanılmadı — doğrulanmadı"*
+  diye işaretlenir: küçük model alakasız sorularda tool çağırmadan uydurabiliyor.
+- **📡 EventBus** — OpenJarvis'in yayınladığı **tüm** olayların canlı akışı. Zaman
+  damgalı, filtresiz: modelin tool çağırma kararı (`inference_end.tool_calls`), hangi
+  argümanlarla çağırdığı, tool'un ham çıktısı, token sayıları, her adımın süresi.
+
+Akış SSE ile canlı gelir (`POST /chat/akis`) — model düşünürken adımlar anında görünür,
+sonda topluca değil. Tool çağırma davranışı prompt'a duyarlı olduğu için takım
+arkadaşları değişikliklerin etkisini burada gözleyebilir.
+
+```bash
+# SSE ucunu doğrudan denemek için:
+curl -N -X POST localhost:8100/chat/akis -H "Content-Type: application/json" \
+     -d '{"mesaj":"Su an en yogun hat hangisi?"}'
+```
 
 **Model seçimi:** Ekranın üstünden model değiştirilebilir. Varsayılan `qwen3.5:0.8b`
 konteyner açılışında indirilir ve hemen kullanıma hazırdır; daha büyük modeller

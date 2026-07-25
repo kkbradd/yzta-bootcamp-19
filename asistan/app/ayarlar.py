@@ -9,6 +9,10 @@ AZAMI_TOKEN = 512
 SICAKLIK = 0.0
 VARSAYILAN_TREND_SAATI = 3
 
+# Tek bir SSE olay gövdesinin üst sınırı. inference_end.content yukarı akışta
+# kırpılmıyor; aşırı büyük bir olay akışı tıkamasın diye kendi savunmamız.
+AZAMI_OLAY_BAYTI = 16384
+
 GEMINI_ANAHTAR_DEGISKENLERI = ("GEMINI_API_KEY", "GOOGLE_API_KEY")
 BULUT_MOTORU = "cloud"
 

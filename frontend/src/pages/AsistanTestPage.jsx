@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { asistanaSor, modelleriGetir, modeliIndir } from '../api/asistan'
+import { asistanaSorAkisli, modelleriGetir, modeliIndir } from '../api/asistan'
 import { ASISTAN_TABANI } from '../api/client'
 
-// Ekip içi deneme ekranı: panelden bağımsız, oturum gerektirmez. Widget'tan farkı,
-// her cevabın hangi tool'ları çağırdığını ve ne kadar sürdüğünü göstermesidir —
-// tool çağırma davranışı qwen3.5:0.8b'de prompt'a duyarlı, gözle takip edilebilmeli.
+// Ekip içi deneme ekranı: panelden bağımsız, oturum gerektirmez.
+// İki sekme — "Sohbet" normal chatbot görünümü, "EventBus" ajanın her adımını
+// ham hâliyle gösterir. Tool çağırma davranışı küçük modelde prompt'a duyarlı,
+// gözle takip edilebilmeli.
 
 const ORNEK_SORULAR = [
   'Şu an en yoğun hat hangisi?',
   '15A hattının anlık durumu nedir?',
   '15U hattı son 3 saatte nasıl seyretti?',
   'Yağmurlu havada yoğun saatte doluluk ne olur?',
-  'Karlı havada sakin saatte ne bekleniyor?',
 ]
 
 const ARAC_ETIKETLERI = {
@@ -21,22 +21,57 @@ const ARAC_ETIKETLERI = {
   yogunluk_tahmini: 'Hava + saat ile doluluk tahmini (demo model)',
 }
 
-function saniyeMetni(milisaniye) {
-  return `${(milisaniye / 1000).toFixed(1)} sn`
-}
-
-function AracRozetleri({ cagrilar }) {
-  if (cagrilar.length === 0) {
-    return <span style={stiller.aracYok}>tool çağrılmadı</span>
-  }
+// Modelin gerçekte ürettiği tek markdown öğesi **kalın** (canlı çıktı analizi).
+// Liste/başlık/tablo çıkmadığı için tam markdown kütüphanesi eklenmedi.
+function KalinMetin({ metin }) {
   return (
     <>
-      {cagrilar.map((arac, sira) => (
-        <span key={`${arac}-${sira}`} style={stiller.aracRozeti} title={ARAC_ETIKETLERI[arac] ?? arac}>
-          {arac}
-        </span>
-      ))}
+      {metin.split(/(\*\*[^*]+\*\*)/g).map((parca, sira) =>
+        parca.startsWith('**') && parca.endsWith('**') && parca.length > 4 ? (
+          <strong key={sira}>{parca.slice(2, -2)}</strong>
+        ) : (
+          parca
+        ),
+      )}
     </>
+  )
+}
+
+function Balon({ mesaj }) {
+  const toolYok = mesaj.kim === 'asistan' && mesaj.aracCagrilari?.length === 0
+  return (
+    <div style={{ ...stiller.balon, ...BALON_STILI[mesaj.kim] }}>
+      <KalinMetin metin={mesaj.metin} />
+      {mesaj.aracCagrilari?.length > 0 && (
+        <div style={stiller.balonAlt}>
+          {mesaj.aracCagrilari.map((arac, sira) => (
+            <span key={`${arac}-${sira}`} style={stiller.aracRozeti} title={ARAC_ETIKETLERI[arac] ?? arac}>
+              {arac}
+            </span>
+          ))}
+          {mesaj.sureMs != null && (
+            <span style={stiller.olcum}>
+              {mesaj.model && `${mesaj.model} · `}
+              {(mesaj.sureMs / 1000).toFixed(1)} sn
+            </span>
+          )}
+        </div>
+      )}
+      {toolYok && (
+        <div style={stiller.uyariAlt}>araç kullanılmadı — cevap doğrulanmadı</div>
+      )}
+    </div>
+  )
+}
+
+function OlaySatiri({ olay, baslangic }) {
+  const gecen = ((olay.zaman * 1000 - baslangic) / 1000).toFixed(2)
+  return (
+    <div style={stiller.olaySatiri}>
+      <span style={stiller.olayZaman}>+{gecen}s</span>
+      <span style={{ ...stiller.olayTipi, ...(OLAY_RENGI[olay.tip] ?? {}) }}>{olay.tip}</span>
+      <pre style={stiller.olayVeri}>{JSON.stringify(olay.veri, null, 1)}</pre>
+    </div>
   )
 }
 
@@ -64,12 +99,7 @@ function ModelSecici({ modeller, secili, onSec, onIndir, indirilen, kilitli }) {
             {model.indirildi_mi ? (
               <span style={stiller.modelHazir}>{seciliMi ? '● seçili' : 'hazır'}</span>
             ) : (
-              <button
-                type="button"
-                style={stiller.indirDugmesi}
-                disabled={kilitli || buIndiriliyor}
-                onClick={() => onIndir(model.ad)}
-              >
+              <button type="button" style={stiller.indirDugmesi} disabled={kilitli || buIndiriliyor} onClick={() => onIndir(model.ad)}>
                 {buIndiriliyor ? 'indiriliyor…' : 'indir'}
               </button>
             )}
@@ -80,25 +110,11 @@ function ModelSecici({ modeller, secili, onSec, onIndir, indirilen, kilitli }) {
   )
 }
 
-function CevapKarti({ kayit }) {
-  return (
-    <div style={stiller.kart}>
-      <div style={stiller.soru}>{kayit.soru}</div>
-      <div style={kayit.hataliMi ? stiller.hataMetni : stiller.cevap}>{kayit.cevap}</div>
-      <div style={stiller.ustBilgi}>
-        <AracRozetleri cagrilar={kayit.aracCagrilari} />
-        <span style={stiller.olcum}>
-          {kayit.model && `${kayit.model} · `}
-          {kayit.turSayisi} tur · {saniyeMetni(kayit.sureMs)}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 export default function AsistanTestPage() {
+  const [sekme, setSekme] = useState('sohbet')
   const [girdi, setGirdi] = useState('')
-  const [kayitlar, setKayitlar] = useState([])
+  const [mesajlar, setMesajlar] = useState([])
+  const [olaylar, setOlaylar] = useState([])
   const [bekliyor, setBekliyor] = useState(false)
   const [modeller, setModeller] = useState([])
   const [seciliModel, setSeciliModel] = useState('')
@@ -108,7 +124,7 @@ export default function AsistanTestPage() {
 
   useEffect(() => {
     sonRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [kayitlar, bekliyor])
+  }, [mesajlar, olaylar, bekliyor, sekme])
 
   useEffect(() => {
     let iptal = false
@@ -116,7 +132,6 @@ export default function AsistanTestPage() {
       .then((liste) => {
         if (iptal) return
         setModeller(liste)
-        // Varsayılan model konteyner açılışında çekilir; seçili olarak onunla başla.
         const varsayilan = liste.find((m) => m.varsayilan_mi) ?? liste.find((m) => m.indirildi_mi)
         setSeciliModel(varsayilan?.ad ?? '')
       })
@@ -133,9 +148,7 @@ export default function AsistanTestPage() {
     setModelHatasi('')
     try {
       await modeliIndir(model)
-      setModeller((onceki) =>
-        onceki.map((m) => (m.ad === model ? { ...m, indirildi_mi: true } : m)),
-      )
+      setModeller((onceki) => onceki.map((m) => (m.ad === model ? { ...m, indirildi_mi: true } : m)))
       setSeciliModel(model)
     } catch (hata) {
       setModelHatasi(`${model} indirilemedi: ${hata.message}`)
@@ -146,44 +159,61 @@ export default function AsistanTestPage() {
 
   async function sor(soru) {
     if (!soru || bekliyor) return
-    setBekliyor(true)
+    // Soru ANINDA görünür: lokal model saniyelerce düşünürken ekran boş kalmamalı.
+    setMesajlar((onceki) => [...onceki, { kim: 'kullanici', metin: soru }])
     setGirdi('')
+    setBekliyor(true)
     const baslangic = performance.now()
+
     try {
-      const yanit = await asistanaSor(soru, seciliModel || undefined)
-      setKayitlar((onceki) => [
+      const yanit = await asistanaSorAkisli(soru, seciliModel || undefined, (tip, veri) =>
+        setOlaylar((onceki) => [...onceki, { tip, ...veri }]),
+      )
+      setMesajlar((onceki) => [
         ...onceki,
-        { ...yanit, soru, sureMs: performance.now() - baslangic, hataliMi: false },
+        { kim: 'asistan', metin: yanit.cevap, ...yanit, sureMs: performance.now() - baslangic },
       ])
     } catch (hata) {
-      setKayitlar((onceki) => [
+      setMesajlar((onceki) => [
         ...onceki,
-        {
-          soru,
-          cevap: `Asistana ulaşılamadı (${ASISTAN_TABANI}): ${hata.message}`,
-          aracCagrilari: [],
-          turSayisi: 0,
-          sureMs: performance.now() - baslangic,
-          hataliMi: true,
-        },
+        { kim: 'hata', metin: `Asistana ulaşılamadı (${ASISTAN_TABANI}): ${hata.message}` },
       ])
     } finally {
       setBekliyor(false)
     }
   }
 
+  const ilkOlayZamani = olaylar.length > 0 ? olaylar[0].zaman * 1000 : 0
+
   return (
     <div style={stiller.kok}>
       <header style={stiller.baslikAlani}>
         <h1 style={stiller.baslik}>YOTAY Asistan — Deneme Ekranı</h1>
         <p style={stiller.altBaslik}>
-          Ekip içi test alanı. Her cevabın altında hangi tool'ların çağrıldığı ve süresi görünür.
+          Ekip içi test alanı. Sohbet sekmesinde konuşun, EventBus sekmesinde ajanın her adımını izleyin.
         </p>
         <code style={stiller.adres}>{ASISTAN_TABANI}</code>
       </header>
 
-      <section style={stiller.ornekAlani}>
-        <div style={stiller.ornekBaslik}>Model</div>
+      <div style={stiller.sekmeler}>
+        <button
+          type="button"
+          style={{ ...stiller.sekme, ...(sekme === 'sohbet' ? stiller.sekmeAktif : {}) }}
+          onClick={() => setSekme('sohbet')}
+        >
+          💬 Sohbet
+        </button>
+        <button
+          type="button"
+          style={{ ...stiller.sekme, ...(sekme === 'olaylar' ? stiller.sekmeAktif : {}) }}
+          onClick={() => setSekme('olaylar')}
+        >
+          📡 EventBus {olaylar.length > 0 && <span style={stiller.sayac}>{olaylar.length}</span>}
+        </button>
+      </div>
+
+      <section style={stiller.ustAlan}>
+        <div style={stiller.ustBaslik}>Model</div>
         <ModelSecici
           modeller={modeller}
           secili={seciliModel}
@@ -192,41 +222,48 @@ export default function AsistanTestPage() {
           indirilen={indirilen}
           kilitli={bekliyor || Boolean(indirilen)}
         />
-        {indirilen && (
-          <div style={stiller.modelUyarisi}>
-            {indirilen} indiriliyor — birkaç dakika sürebilir, sayfayı kapatmayın.
-          </div>
-        )}
+        {indirilen && <div style={stiller.modelUyarisi}>{indirilen} indiriliyor — birkaç dakika sürebilir.</div>}
         {modelHatasi && <div style={stiller.modelHatasi}>{modelHatasi}</div>}
       </section>
 
-      <section style={stiller.ornekAlani}>
-        <div style={stiller.ornekBaslik}>Örnek sorular</div>
-        <div style={stiller.ornekListesi}>
-          {ORNEK_SORULAR.map((ornek) => (
-            <button
-              key={ornek}
-              type="button"
-              style={stiller.ornekDugmesi}
-              disabled={bekliyor}
-              onClick={() => sor(ornek)}
-            >
-              {ornek}
-            </button>
-          ))}
-        </div>
-      </section>
+      {sekme === 'sohbet' ? (
+        <>
+          <section style={stiller.ustAlan}>
+            <div style={stiller.ustBaslik}>Örnek sorular</div>
+            <div style={stiller.ornekListesi}>
+              {ORNEK_SORULAR.map((ornek) => (
+                <button key={ornek} type="button" style={stiller.ornekDugmesi} disabled={bekliyor} onClick={() => sor(ornek)}>
+                  {ornek}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      <section style={stiller.akis}>
-        {kayitlar.length === 0 && !bekliyor && (
-          <div style={stiller.bosDurum}>Bir soru sorun ya da yukarıdan örnek seçin.</div>
-        )}
-        {kayitlar.map((kayit, sira) => (
-          <CevapKarti key={`${kayit.soru}-${sira}`} kayit={kayit} />
-        ))}
-        {bekliyor && <div style={stiller.bekleme}>Asistan düşünüyor… (lokal model, birkaç saniye sürebilir)</div>}
-        <div ref={sonRef} />
-      </section>
+          <section style={stiller.akis}>
+            {mesajlar.length === 0 && !bekliyor && (
+              <div style={stiller.bosDurum}>Bir soru sorun ya da yukarıdan örnek seçin.</div>
+            )}
+            {mesajlar.map((mesaj, sira) => (
+              <Balon key={sira} mesaj={mesaj} />
+            ))}
+            {bekliyor && (
+              <div style={{ ...stiller.balon, ...BALON_STILI.asistan, ...stiller.yaziyor }}>Düşünüyor…</div>
+            )}
+            <div ref={sonRef} />
+          </section>
+        </>
+      ) : (
+        <section style={stiller.olayAkisi}>
+          {olaylar.length === 0 ? (
+            <div style={stiller.bosDurum}>
+              Henüz olay yok. Sohbet sekmesinden bir soru sorun; adımlar burada canlı akar.
+            </div>
+          ) : (
+            olaylar.map((olay, sira) => <OlaySatiri key={sira} olay={olay} baslangic={ilkOlayZamani} />)
+          )}
+          <div ref={sonRef} />
+        </section>
+      )}
 
       <form
         style={stiller.form}
@@ -250,75 +287,64 @@ export default function AsistanTestPage() {
   )
 }
 
+const BALON_STILI = {
+  kullanici: { alignSelf: 'flex-end', background: '#111827', color: '#ffffff' },
+  asistan: { alignSelf: 'flex-start', background: '#f3f4f6', color: '#111827' },
+  hata: { alignSelf: 'flex-start', background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a' },
+}
+
+const OLAY_RENGI = {
+  tool_call_start: { background: '#eef2ff', color: '#3730a3' },
+  tool_call_end: { background: '#ecfdf5', color: '#065f46' },
+  inference_start: { background: '#fef3c7', color: '#92400e' },
+  inference_end: { background: '#fef3c7', color: '#92400e' },
+}
+
 const stiller = {
   kok: {
     minHeight: '100vh', background: '#f9fafb', padding: '32px 20px',
-    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
   },
   baslikAlani: { width: '100%', maxWidth: '760px' },
   baslik: { fontSize: '22px', fontWeight: '700', color: '#111827', margin: 0 },
   altBaslik: { fontSize: '13px', color: '#6b7280', margin: '6px 0 0' },
-  adres: {
-    fontSize: '11px', color: '#6b7280', background: '#f3f4f6',
-    padding: '2px 8px', borderRadius: '6px', display: 'inline-block', marginTop: '8px',
+  adres: { fontSize: '11px', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '6px', display: 'inline-block', marginTop: '8px' },
+  sekmeler: { width: '100%', maxWidth: '760px', display: 'flex', gap: '8px' },
+  sekme: {
+    flex: 1, padding: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+    border: '1px solid #e5e7eb', borderRadius: '10px', background: '#ffffff', color: '#6b7280',
   },
-  ornekAlani: { width: '100%', maxWidth: '760px' },
-  ornekBaslik: { fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' },
+  sekmeAktif: { background: '#111827', color: '#ffffff', borderColor: '#111827' },
+  sayac: { fontSize: '11px', opacity: 0.75, marginLeft: '4px' },
+  ustAlan: { width: '100%', maxWidth: '760px' },
+  ustBaslik: { fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' },
   ornekListesi: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+  ornekDugmesi: { fontSize: '12px', padding: '6px 12px', borderRadius: '999px', border: '1px solid #e5e7eb', background: '#ffffff', color: '#374151', cursor: 'pointer' },
   modelListesi: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-  modelKarti: {
-    display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px',
-    border: '1px solid #e5e7eb', borderRadius: '10px', background: '#ffffff',
-  },
+  modelKarti: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: '10px', background: '#ffffff' },
   modelKartiSecili: { borderColor: '#111827', boxShadow: '0 0 0 1px #111827' },
-  modelSecDugmesi: {
-    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1px',
-    border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, textAlign: 'left',
-  },
+  modelSecDugmesi: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1px', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, textAlign: 'left' },
   modelEtiketi: { fontSize: '12px', fontWeight: '600', color: '#111827' },
   modelBoyutu: { fontSize: '10px', color: '#9ca3af' },
   modelHazir: { fontSize: '10px', color: '#059669', fontWeight: '600' },
-  indirDugmesi: {
-    fontSize: '11px', fontWeight: '600', padding: '4px 10px', borderRadius: '999px',
-    border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer',
-  },
+  indirDugmesi: { fontSize: '11px', fontWeight: '600', padding: '4px 10px', borderRadius: '999px', border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer' },
   modelUyarisi: { fontSize: '11px', color: '#92400e', marginTop: '8px' },
   modelHatasi: { fontSize: '11px', color: '#b91c1c', marginTop: '8px' },
-  ornekDugmesi: {
-    fontSize: '12px', padding: '6px 12px', borderRadius: '999px',
-    border: '1px solid #e5e7eb', background: '#ffffff', color: '#374151', cursor: 'pointer',
-  },
-  akis: {
-    width: '100%', maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '12px',
-  },
-  bosDurum: {
-    fontSize: '13px', color: '#9ca3af', textAlign: 'center', padding: '32px 0',
-  },
-  kart: {
-    background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px',
-  },
-  soru: { fontSize: '13px', fontWeight: '600', color: '#111827', marginBottom: '8px' },
-  cevap: { fontSize: '14px', color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap' },
-  hataMetni: { fontSize: '13px', color: '#b91c1c', lineHeight: 1.6 },
-  ustBilgi: {
-    display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px',
-    marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f3f4f6',
-  },
-  aracRozeti: {
-    fontSize: '11px', fontWeight: '600', color: '#3730a3', background: '#eef2ff',
-    padding: '3px 8px', borderRadius: '999px',
-  },
-  aracYok: { fontSize: '11px', color: '#9ca3af', fontStyle: 'italic' },
+  akis: { width: '100%', maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '10px', minHeight: '240px' },
+  balon: { maxWidth: '78%', padding: '10px 14px', borderRadius: '14px', fontSize: '14px', lineHeight: 1.55, whiteSpace: 'pre-wrap' },
+  balonAlt: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.07)' },
+  aracRozeti: { fontSize: '11px', fontWeight: '600', color: '#3730a3', background: '#eef2ff', padding: '3px 8px', borderRadius: '999px' },
   olcum: { fontSize: '11px', color: '#9ca3af', marginLeft: 'auto' },
-  bekleme: { fontSize: '13px', color: '#6b7280', textAlign: 'center', padding: '12px' },
+  uyariAlt: { fontSize: '11px', color: '#b45309', marginTop: '8px', fontStyle: 'italic' },
+  yaziyor: { color: '#9ca3af', fontStyle: 'italic' },
+  bosDurum: { fontSize: '13px', color: '#9ca3af', textAlign: 'center', padding: '32px 0' },
+  olayAkisi: { width: '100%', maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '4px', minHeight: '240px', background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px' },
+  olaySatiri: { display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '6px 0', borderBottom: '1px solid #f3f4f6' },
+  olayZaman: { fontSize: '11px', color: '#9ca3af', fontFamily: 'monospace', flexShrink: 0, width: '52px' },
+  olayTipi: { fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '6px', flexShrink: 0, background: '#f3f4f6', color: '#6b7280' },
+  olayVeri: { fontSize: '11px', color: '#374151', fontFamily: 'monospace', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, maxHeight: '160px', overflowY: 'auto' },
   form: { width: '100%', maxWidth: '760px', display: 'flex', gap: '8px' },
-  girdi: {
-    flex: 1, padding: '11px 14px', fontSize: '14px', borderRadius: '10px',
-    border: '1px solid #e5e7eb', outline: 'none',
-  },
-  gonderDugmesi: {
-    padding: '11px 20px', background: '#111827', color: '#ffffff', border: 'none',
-    borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-  },
+  girdi: { flex: 1, padding: '11px 14px', fontSize: '14px', borderRadius: '10px', border: '1px solid #e5e7eb', outline: 'none' },
+  gonderDugmesi: { padding: '11px 20px', background: '#111827', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
 }
