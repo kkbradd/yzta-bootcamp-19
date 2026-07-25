@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YOTAY Asistan — Deneme</title>
+<style>
+  :root {
+    --zemin: #0f1115; --kart: #181b22; --kart2: #1f232c; --cizgi: #2b3039;
+    --metin: #e6e8ec; --soluk: #9aa1ad; --vurgu: #4c8dff; --iyi: #3fb950;
+    --uyari: #d29922; --kotu: #f85149; --kullanici: #2d4a7c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--zemin); color: var(--metin);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .sarmal { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 28px 0 10px; }
+  .altbaslik { color: var(--soluk); font-size: 14px; margin: 0 0 20px; }
+  .kart { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .satir { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  label { color: var(--soluk); font-size: 13px; }
+  input[type=text], select, textarea {
+    background: var(--kart2); color: var(--metin); border: 1px solid var(--cizgi);
+    border-radius: 7px; padding: 9px 11px; font: inherit; font-size: 14px;
+  }
+  input[type=text] { flex: 1; min-width: 220px; }
+  textarea { width: 100%; resize: vertical; min-height: 62px; }
+  button {
+    background: var(--vurgu); color: #fff; border: 0; border-radius: 7px;
+    padding: 9px 16px; font: inherit; font-weight: 500; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.ikincil { background: var(--kart2); color: var(--metin); border: 1px solid var(--cizgi); }
+  .rozet { font-size: 12px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--cizgi); color: var(--soluk); }
+  .rozet.iyi { color: var(--iyi); border-color: var(--iyi); }
+  .rozet.kotu { color: var(--kotu); border-color: var(--kotu); }
+
+  /* Adımlar */
+  ol.adimlar { padding-left: 0; list-style: none; counter-reset: adim; margin: 0; }
+  ol.adimlar > li { counter-increment: adim; position: relative; padding: 0 0 18px 40px; }
+  ol.adimlar > li::before {
+    content: counter(adim); position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--kart2);
+    border: 1px solid var(--cizgi); color: var(--vurgu);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600;
+  }
+  ol.adimlar b { color: var(--metin); }
+  code, kbd {
+    background: var(--kart2); border: 1px solid var(--cizgi); border-radius: 5px;
+    padding: 1px 6px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px;
+  }
+  pre { background: var(--kart2); border: 1px solid var(--cizgi); border-radius: 8px;
+        padding: 12px; overflow-x: auto; font-size: 13px; margin: 8px 0; }
+
+  /* Sohbet */
+  .sohbet { max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px; }
+  /* Satır sonları <br> ile üretilir (bkz. kalinlariUygula); pre-wrap eklenirse çiftlenir.
+     pre-wrap yalnız madde girintisindeki boşlukları korumak için gerekli. */
+  .balon { max-width: 78%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; word-wrap: break-word; }
+  .balon.ben { align-self: flex-end; background: var(--kullanici); border-bottom-right-radius: 4px; }
+  .balon.o { align-self: flex-start; background: var(--kart2); border: 1px solid var(--cizgi); border-bottom-left-radius: 4px; }
+  .balon .ustbilgi { font-size: 11px; color: var(--soluk); margin-bottom: 5px; }
+  .dipnot { font-size: 12px; color: var(--soluk); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--cizgi); }
+  .dipnot.uyari { color: var(--uyari); }
+  .ornekler { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ornekler button { background: var(--kart2); border: 1px solid var(--cizgi); color: var(--soluk); font-size: 13px; padding: 6px 12px; }
+  .ornekler button:hover:not(:disabled) { color: var(--metin); border-color: var(--vurgu); }
+  .bos { color: var(--soluk); text-align: center; padding: 36px 12px; font-size: 14px; }
+
+  /* Sekmeler */
+  .sekmeler { display: flex; gap: 8px; margin-bottom: 16px; }
+  .sekme {
+    flex: 1; background: var(--kart2); border: 1px solid var(--cizgi); color: var(--soluk);
+    border-radius: 9px; padding: 12px 14px; font: inherit; font-size: 14px;
+    cursor: pointer; text-align: center; transition: border-color .15s, color .15s;
+  }
+  .sekme:hover { color: var(--metin); }
+  .sekme[aria-selected="true"] {
+    border-color: var(--vurgu); color: var(--metin); background: rgba(76,141,255,.12);
+  }
+  .sekme .sayac {
+    display: inline-block; margin-left: 7px; padding: 1px 8px; border-radius: 20px;
+    background: var(--vurgu); color: #fff; font-size: 11px; font-weight: 600;
+  }
+  .sekme .sayac:empty, .sekme .sayac[hidden] { display: none; }
+  [role="tabpanel"][hidden] { display: none; }
+
+  /* Olay akışı */
+  .olaylar { max-height: 300px; overflow-y: auto; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .olaylar.genis { max-height: 520px; border: 1px solid var(--cizgi); border-radius: 8px; background: var(--kart2); }
+  .olay .soru-ayraci {
+    color: var(--metin); font-weight: 600; padding: 9px 8px 5px;
+    border-top: 1px solid var(--vurgu); width: 100%;
+  }
+  .olay.ayrac { display: block; padding: 0; }
+  .olay { padding: 5px 8px; border-bottom: 1px solid var(--cizgi); display: flex; gap: 9px; align-items: flex-start; }
+  .olay:last-child { border-bottom: 0; }
+  .olay .an { color: var(--soluk); flex-shrink: 0; }
+  .olay .tip { color: var(--vurgu); flex-shrink: 0; min-width: 140px; }
+  .olay .veri { color: var(--soluk); overflow-wrap: anywhere; }
+  .olay.arac .tip { color: var(--iyi); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--cizgi); }
+  th { color: var(--soluk); font-weight: 500; font-size: 13px; }
+  .not { border-left: 3px solid var(--uyari); background: rgba(210,153,34,.08);
+         padding: 12px 14px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 14px; }
+  .not.bilgi { border-left-color: var(--vurgu); background: rgba(76,141,255,.08); }
+  ul.sade { padding-left: 20px; margin: 8px 0; }
+  ul.sade li { margin-bottom: 5px; }
+</style>
+</head>
+<body>
+<div class="sarmal">
+
+  <h1>YOTAY Asistan — Deneme Sayfası</h1>
+  <p class="altbaslik">
+    Üsküdar toplu taşıma yoğunluk asistanı. Lokal bir dil modeli (Qwen 3.5) kendi
+    araçlarını çağırarak canlı veriye bakar. Bu sayfa kod okumadan denemeniz içindir.
+  </p>
+
+  <!-- ============ BAĞLANTI ============ -->
+  <div class="kart">
+    <div class="satir">
+      <label for="adres">Asistan adresi</label>
+      <input type="text" id="adres" value="http://localhost:8100">
+      <button class="ikincil" id="baglanButonu">Bağlan</button>
+      <span class="rozet" id="durumRozeti">denenmedi</span>
+    </div>
+    <div class="dipnot" id="baglantiNotu">
+      Bu dosya kendi başına çalışır — bilgisayarınıza indirip çift tıklamanız yeter.
+      Sistem <b>başka birinin</b> makinesinde çalışıyorsa <code>localhost</code> yerine
+      o kişinin yerel IP'sini yazın (örn. <code>http://192.168.1.102:8100</code>) ve
+      <b>Bağlan</b>'a basın; aynı ağda olmanız gerekir. Adres tarayıcınıza kaydedilir.
+    </div>
+  </div>
+
+  <!-- ============ ADIMLAR ============ -->
+  <h2>Sırayla ne yapmalısınız?</h2>
+  <div class="kart">
+    <ol class="adimlar">
+      <li>
+        <b>Sistemin ayakta olduğundan emin olun.</b><br>
+        Projeyi çalıştıran kişi <code>docker compose --profile gercek up -d</code>
+        komutunu vermiş olmalı. Yukarıdaki <b>Bağlan</b> düğmesine basın; rozet
+        <span class="rozet iyi">bağlı</span> olmalı.
+      </li>
+      <li>
+        <b>Model seçin.</b><br>
+        Varsayılan <b>Qwen 3.5 0.8B</b> hazır kuruludur ve hızlıdır. Daha büyük
+        modeller ilk seçimde indirilir (birkaç dakika sürebilir); indirilmemiş
+        olanlar listede işaretlidir.
+      </li>
+      <li>
+        <b>Hazır sorulardan biriyle başlayın.</b><br>
+        Aşağıdaki düğmeler gerçek verisi olan hatları sorar. İlk cevap
+        <b>10–40 saniye</b> sürebilir — model bilgisayarın işlemcisinde çalışıyor,
+        ekran donmuş değildir.
+      </li>
+      <li>
+        <b>Cevabın altındaki araç etiketine bakın.</b><br>
+        <span class="rozet iyi">hat_yogunluklari</span> gibi bir etiket görüyorsanız
+        asistan gerçekten veriye bakmıştır. <span class="rozet kotu">araç kullanılmadı</span>
+        yazıyorsa cevap <b>modelin kendi uydurmasıdır</b>, güvenmeyin.
+      </li>
+      <li>
+        <b><span class="rozet">📡 EventBus</span> sekmesine geçin.</b><br>
+        Modelin attığı her adım oradadır: hangi araca karar verdi, hangi
+        parametreyle çağırdı, araç <b>ham olarak</b> ne döndürdü, ikinci
+        düşünmede ne yazdı. Cevabı bu ham veriyle karşılaştırın — sistemin
+        "kara kutu" olmadığını burada görürsünüz. Sohbet sekmesine geri
+        dönebilirsiniz, akış silinmez.
+      </li>
+      <li>
+        <b>Kendi sorunuzu yazın.</b><br>
+        Yoğunluk, hat durumu, saatlik seyir ve hava durumuna göre tahmin
+        sorabilirsiniz.
+      </li>
+    </ol>
+  </div>
+
+  <!-- ============ SOHBET + EVENTBUS ============ -->
+  <h2>Deneyin</h2>
+  <div class="kart">
+    <div class="sekmeler" role="tablist">
+      <button class="sekme" role="tab" id="sekmeSohbet"
+              aria-selected="true" aria-controls="panelSohbet">
+        💬 Sohbet
+      </button>
+      <button class="sekme" role="tab" id="sekmeOlaylar"
+              aria-selected="false" aria-controls="panelOlaylar">
+        📡 EventBus<span class="sayac" id="olaySayaci" hidden></span>
+      </button>
+    </div>
+
+    <!-- --- Sohbet paneli --- -->
+    <div role="tabpanel" id="panelSohbet" aria-labelledby="sekmeSohbet">
+      <div class="satir" style="margin-bottom:14px">
+        <label for="model">Model</label>
+        <select id="model"><option>yükleniyor…</option></select>
+        <button class="ikincil" id="temizleButonu">Sohbeti temizle</button>
+      </div>
+
+      <div class="ornekler" id="ornekler"></div>
+
+      <div class="sohbet" id="sohbet">
+        <div class="bos">Henüz mesaj yok — yukarıdaki hazır sorulardan birine basın.</div>
+      </div>
+    </div>
+
+    <!-- --- EventBus paneli --- -->
+    <div role="tabpanel" id="panelOlaylar" aria-labelledby="sekmeOlaylar" hidden>
+      <p class="dipnot" style="border:0; margin:0 0 12px; padding:0">
+        Modelin attığı <b>her adım</b>, olduğu anda. Hangi araca karar verdiği,
+        hangi parametreyle çağırdığı ve aracın döndürdüğü <b>ham veri</b> burada
+        görünür — cevabın uydurma olup olmadığını buradan anlarsınız.
+      </p>
+      <div class="satir" style="margin-bottom:12px">
+        <button class="ikincil" id="olaylariTemizleButonu">Akışı temizle</button>
+        <span class="dipnot" style="border:0; margin:0; padding:0" id="olayOzeti">
+          henüz olay yok
+        </span>
+      </div>
+      <div class="olaylar genis" id="olaylar">
+        <div class="bos">Sohbet sekmesinden bir soru sorun; adımlar burada anlık akar.</div>
+      </div>
+    </div>
+
+    <!-- --- Giriş (iki sekmede de görünür) --- -->
+    <div style="margin-top:14px">
+      <textarea id="giris" placeholder="Sorunuzu yazın… (Enter ile gönderilir, satır atlamak için Shift+Enter)"></textarea>
+      <div class="satir" style="margin-top:8px; justify-content:space-between">
+        <span class="dipnot" style="border:0; margin:0; padding:0">
+          Her soru bağımsızdır — asistanın önceki soruyu hatırlaması beklenmez.
+        </span>
+        <button id="gonderButonu">Gönder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HAFIZA ============ -->
+  <h2>Asistanın hafızası var mı?</h2>
+  <div class="kart">
+    <p style="margin-top:0"><b>Hayır — ve bu bilinçli bir tercih.</b></p>
+    <p>
+      Her soru için sıfırdan bir ajan kurulur; geçmiş konuşma taşınmaz.
+      Pratikte şu anlama gelir:
+    </p>
+    <table>
+      <tr><th>Soru</th><th>Sonuç</th></tr>
+      <tr><td>"15B hattı nasıl?"</td><td>Çalışır — araç çağırır, cevap verir</td></tr>
+      <tr><td>Ardından: "peki trendi ne?"</td><td><b>Çalışmaz</b> — hangi hattı kastettiğinizi bilmez</td></tr>
+      <tr><td>Bunun yerine: "15B hattının trendi ne?"</td><td>Çalışır</td></tr>
+    </table>
+    <p style="margin-bottom:0">
+      <b>Neden böyle?</b> Kullanılan model küçük (0.8 milyar parametre) ve bağlam
+      penceresine aşırı duyarlı. Biriken konuşma geçmişi, ölçtüğümüz kadarıyla
+      araç çağırma davranışını bozuyor. Durumsuz tasarım, doğru araç çağırma
+      oranını yüksek tutuyor. Sohbet geçmişi sunucuda <b>saklanmaz</b>; yukarıda
+      gördüğünüz baloncuklar yalnız tarayıcınızın belleğindedir, sayfayı
+      yenileyince silinir.
+    </p>
+  </div>
+
+  <!-- ============ NE SORABILIRIM ============ -->
+  <h2>Ne sorabilirsiniz?</h2>
+  <div class="kart">
+    <p style="margin-top:0">Asistanın <b>dört</b> aracı var. Sorunuz bunlardan birine denk gelmelidir:</p>
+    <table>
+      <tr><th>Araç</th><th>Ne yapar</th><th>Örnek soru</th></tr>
+      <tr>
+        <td><code>hat_yogunluklari</code></td>
+        <td>Tüm hatların anlık ortalama doluluğu</td>
+        <td>"Şu an en yoğun hat hangisi?"</td>
+      </tr>
+      <tr>
+        <td><code>hat_anlik_durum</code></td>
+        <td>Bir hattaki araçların kişi sayısı</td>
+        <td>"15B hattında kaç kişi var?"</td>
+      </tr>
+      <tr>
+        <td><code>hat_trend</code></td>
+        <td>Bir hattın son saatlerdeki seyri</td>
+        <td>"15 hattının son 6 saatteki doluluğu nasıldı?"</td>
+      </tr>
+      <tr>
+        <td><code>yogunluk_tahmini</code></td>
+        <td>Hava + saate göre doluluk tahmini</td>
+        <td>"Yağmurlu havada yoğun saatte doluluk ne olur?"</td>
+      </tr>
+    </table>
+
+    <div class="not bilgi">
+      <b>Veri olan hatlar:</b> 15, 15A, 15B, 15C, 15E. Diğer hatlar (15U, 15F, 15G,
+      15Y, 15R, 15S) tanımlı ama şu an ölçüm göndermiyor — onları sorarsanız
+      "veri yok" cevabı almanız <b>doğru</b> davranıştır.
+    </div>
+
+    <div class="not">
+      <b>Bilinen zayıflık:</b> Küçük model bazen aracın "veri yok" dediği bir hattı
+      yoğun sanabiliyor veya sistemde olmayan bir hat numarası uydurabiliyor.
+      Böyle bir şey görürseniz bu bir <b>hata değil, ölçtüğümüz bir sınır</b> —
+      adım akışında aracın gerçekte ne döndürdüğünü karşılaştırabilirsiniz.
+      Daha büyük modeli seçmek genelde düzeltir.
+    </div>
+
+    <p style="margin-bottom:0">
+      <b>Cevaplayamadıkları:</b> sefer saatleri, ücret, güzergâh tarifi, hava durumu
+      (gerçek), Üsküdar dışı hatlar. Bunlar için araç yok — model uydurmaya
+      çalışırsa araç etiketi boş kalır, oradan anlarsınız.
+    </p>
+  </div>
+
+  <!-- ============ TAHMIN ARACI ============ -->
+  <h2>Tahmin aracı hakkında</h2>
+  <div class="kart">
+    <p style="margin:0">
+      <code>yogunluk_tahmini</code> aracı, ekip arkadaşımızın eğittiği ayrı bir
+      makine öğrenmesi modelini kullanır. Cevabına her zaman
+      <b>"Bu bir tahmindir"</b> notu eklenir; sentetik veriyle eğitilmiş bir demo
+      modelidir, gerçek ölçüm değildir. Diğer üç araç ise canlı veritabanından
+      okur — onlar gerçek ölçümdür.
+    </p>
+  </div>
+
+  <!-- ============ SORUN GIDERME ============ -->
+  <h2>Bir şey çalışmazsa</h2>
+  <div class="kart">
+    <table>
+      <tr><th>Belirti</th><th>Sebep / çözüm</th></tr>
+      <tr>
+        <td>Rozet <span class="rozet kotu">bağlanamadı</span></td>
+        <td>Sistem ayakta değil ya da adres yanlış. Sunucuyu çalıştıran kişiye
+            sorun; <code>localhost</code> yerine onun IP'sini deneyin.</td>
+      </tr>
+      <tr>
+        <td>Cevap çok geç geliyor</td>
+        <td>Normal. Model işlemcide çalışıyor; ilk soru en yavaşıdır. Büyük model
+            seçtiyseniz daha da yavaştır.</td>
+      </tr>
+      <tr>
+        <td>"araç kullanılmadı" uyarısı</td>
+        <td>Model araca gitmeden cevap uydurdu. Soruyu daha net sorun
+            ("15B hattında kaç kişi var?") veya büyük modeli deneyin.</td>
+      </tr>
+      <tr>
+        <td>Tüm hatlar "veri yok"</td>
+        <td>Simülatör/edge durmuş olabilir. Sunucu sahibine
+            <code>docker compose ps</code> baktırın.</td>
+      </tr>
+      <tr>
+        <td>Model listesi boş</td>
+        <td>Ollama servisi hazır değil. Birkaç dakika sonra <b>Bağlan</b>'a tekrar basın.</td>
+      </tr>
+    </table>
+  </div>
+
+  <p class="altbaslik" style="margin-top:24px; text-align:center">
+    Sorularınızı ve gördüğünüz tuhaf cevapları ekiple paylaşın — özellikle
+    araç etiketi boş kalan cevaplar bizim için değerli.
+  </p>
+</div>
+
+<script>
+"use strict";
+
+const ORNEK_SORULAR = [
+  "Şu an en yoğun hat hangisi?",
+  "15B hattında kaç kişi var?",
+  "15 hattının son 6 saatteki doluluğu nasıldı?",
+  "Yağmurlu havada yoğun saatte doluluk ne olur?",
+];
+
+const ADRES_ANAHTARI = "yotay_asistan_adresi";
+
+const $ = (kimlik) => document.getElementById(kimlik);
+const adresKutusu = $("adres");
+const durumRozeti = $("durumRozeti");
+const modelSecici = $("model");
+const sohbetKutusu = $("sohbet");
+const olayKutusu = $("olaylar");
+const girisKutusu = $("giris");
+const gonderButonu = $("gonderButonu");
+
+let mesajVar = false;
+let olayVar = false;
+let mesguL = false;
+let olaySayisi = 0;
+let aktifSekme = "sohbet";
+
+// ---------- yardımcılar ----------
+
+function tabani() {
+  return adresKutusu.value.trim().replace(/\/+$/, "");
+}
+
+function metinDugumu(metin) {
+  return document.createTextNode(metin);
+}
+
+// Model **kalın** ve "* madde" üretiyor; başka markdown ölçülmedi.
+// innerHTML kullanılmıyor: model çıktısı güvenilmez, DOM'a metin olarak konur.
+function kalinlariUygula(kap, metin) {
+  metin.split("\n").forEach((satir, sira) => {
+    if (sira > 0) kap.appendChild(document.createElement("br"));
+    const madde = satir.match(/^(\s*)[*-]\s+(.*)$/);
+    if (madde) {
+      // Girinti seviyesini koru, yıldızı okunur bir madde imine çevir.
+      kap.appendChild(metinDugumu(" ".repeat(madde[1].length) + "• "));
+      satirParcalari(kap, madde[2]);
+    } else {
+      satirParcalari(kap, satir);
+    }
+  });
+}
+
+function satirParcalari(kap, satir) {
+  satir.split(/\*\*(.+?)\*\*/g).forEach((parca, sira) => {
+    if (!parca) return;
+    if (sira % 2 === 1) {
+      const kalin = document.createElement("b");
+      kalin.appendChild(metinDugumu(parca));
+      kap.appendChild(kalin);
+    } else {
+      kap.appendChild(metinDugumu(parca));
+    }
+  });
+}
+
+function rozetiAyarla(metin, sinif) {
+  durumRozeti.textContent = metin;
+  durumRozeti.className = "rozet" + (sinif ? " " + sinif : "");
+}
+
+function asagiKaydir(kutu) {
+  kutu.scrollTop = kutu.scrollHeight;
+}
+
+// ---------- sohbet baloncukları ----------
+
+function bosluguKaldir() {
+  if (mesajVar) return;
+  sohbetKutusu.innerHTML = "";
+  mesajVar = true;
+}
+
+function balonEkle(kim, metin) {
+  bosluguKaldir();
+  const balon = document.createElement("div");
+  balon.className = "balon " + (kim === "ben" ? "ben" : "o");
+
+  const ustbilgi = document.createElement("div");
+  ustbilgi.className = "ustbilgi";
+  ustbilgi.textContent = kim === "ben" ? "Siz" : "Asistan";
+  balon.appendChild(ustbilgi);
+
+  const govde = document.createElement("div");
+  balon.appendChild(govde);
+  if (metin) kalinlariUygula(govde, metin);
+
+  sohbetKutusu.appendChild(balon);
+  asagiKaydir(sohbetKutusu);
+  return { balon, govde };
+}
+
+function araclariGoster(balon, aracCagrilari, turSayisi, modelAdi) {
+  const dipnot = document.createElement("div");
+  dipnot.className = "dipnot";
+  if (aracCagrilari.length === 0) {
+    dipnot.className += " uyari";
+    dipnot.textContent =
+      "⚠ araç kullanılmadı — bu cevap veriye bakmadan üretildi, doğrulanmamıştır";
+  } else {
+    dipnot.textContent =
+      "✓ kullanılan araç: " + aracCagrilari.join(", ") +
+      "  ·  " + turSayisi + " tur  ·  " + modelAdi;
+  }
+  balon.appendChild(dipnot);
+}
+
+// ---------- EventBus paneli ----------
+
+function olayBoslugunuKaldir() {
+  if (olayVar) return;
+  olayKutusu.innerHTML = "";
+  olayVar = true;
+}
+
+// Her soru akışın başına başlık düşer; hangi adımın hangi soruya ait olduğu belli olsun.
+function soruAyraciEkle(soru) {
+  olayBoslugunuKaldir();
+  const satir = document.createElement("div");
+  satir.className = "olay ayrac";
+  const baslik = document.createElement("div");
+  baslik.className = "soru-ayraci";
+  baslik.textContent = "▸ " + soru;
+  satir.appendChild(baslik);
+  olayKutusu.appendChild(satir);
+  asagiKaydir(olayKutusu);
+}
+
+function sayaciGuncelle() {
+  const sayac = $("olaySayaci");
+  if (olaySayisi === 0) {
+    sayac.hidden = true;
+    return;
+  }
+  // Kullanıcı EventBus sekmesindeyse rozet gereksiz — zaten bakıyor.
+  sayac.hidden = aktifSekme === "olaylar";
+  sayac.textContent = olaySayisi;
+}
+
+function olayEkle(kutu, tip, veri, baslangic) {
+  olayBoslugunuKaldir();
+  olaySayisi += 1;
+  sayaciGuncelle();
+  $("olayOzeti").textContent = olaySayisi + " olay";
+  const satir = document.createElement("div");
+  satir.className = "olay" + (tip.startsWith("tool_") ? " arac" : "");
+
+  const an = document.createElement("span");
+  an.className = "an";
+  an.textContent = "+" + ((performance.now() - baslangic) / 1000).toFixed(2) + "s";
+
+  const tipKutusu = document.createElement("span");
+  tipKutusu.className = "tip";
+  tipKutusu.textContent = tip;
+
+  const veriKutusu = document.createElement("span");
+  veriKutusu.className = "veri";
+  veriKutusu.textContent = ozetle(tip, veri);
+
+  satir.append(an, tipKutusu, veriKutusu);
+  kutu.appendChild(satir);
+  asagiKaydir(kutu);
+}
+
+// Ham JSON okunmaz uzunlukta olabiliyor; adım tipine göre işe yarar alanı seç.
+function ozetle(tip, veri) {
+  if (!veri || typeof veri !== "object") return "";
+  if (tip === "tool_call_start") {
+    return veri.tool + "(" + JSON.stringify(veri.arguments ?? {}) + ")";
+  }
+  if (tip === "tool_call_end") {
+    const sonuc = typeof veri.result === "string" ? veri.result : JSON.stringify(veri.result ?? "");
+    const sure = veri.latency != null ? " (" + (veri.latency * 1000).toFixed(0) + " ms)" : "";
+    return veri.tool + sure + " → " + kirp(sonuc, 220);
+  }
+  if (tip === "inference_end") {
+    const cagrilar = veri.tool_calls ?? [];
+    if (cagrilar.length) {
+      return "araç kararı: " + cagrilar.map((c) => c.name ?? c.tool ?? "?").join(", ");
+    }
+    return kirp(String(veri.content ?? ""), 300);
+  }
+  if (tip === "inference_start") return String(veri.model ?? "");
+  if (tip === "agent_turn_start") return kirp(String(veri.input ?? ""), 200);
+  if (tip === "agent_turn_end") return veri.turns + " tur";
+  return kirp(JSON.stringify(veri), 240);
+}
+
+function kirp(metin, sinir) {
+  return metin.length > sinir ? metin.slice(0, sinir) + "…" : metin;
+}
+
+// ---------- sunucu ----------
+
+async function baglantiyiDene() {
+  rozetiAyarla("deneniyor…", "");
+  try {
+    const yanit = await fetch(tabani() + "/saglik", { headers: { Accept: "application/json" } });
+    if (!yanit.ok) throw new Error("HTTP " + yanit.status);
+    rozetiAyarla("bağlı", "iyi");
+    localStorage.setItem(ADRES_ANAHTARI, tabani());
+    await modelleriYukle();
+    return true;
+  } catch (hata) {
+    rozetiAyarla("bağlanamadı", "kotu");
+    modelSecici.innerHTML = "<option>—</option>";
+    return false;
+  }
+}
+
+async function modelleriYukle() {
+  try {
+    const yanit = await fetch(tabani() + "/modeller");
+    if (!yanit.ok) throw new Error("HTTP " + yanit.status);
+    const modeller = await yanit.json();
+    modelSecici.innerHTML = "";
+    modeller.forEach((model) => {
+      const secenek = document.createElement("option");
+      secenek.value = model.ad;
+      secenek.textContent =
+        model.etiket + " (" + model.boyut + ")" +
+        (model.indirildi_mi ? "" : " — indirilecek");
+      if (model.varsayilan_mi) secenek.selected = true;
+      modelSecici.appendChild(secenek);
+    });
+  } catch (hata) {
+    modelSecici.innerHTML = "<option>model listesi alınamadı</option>";
+  }
+}
+
+// SSE çerçeveleri boş satırla ayrılır; yarım çerçeve tamponda bekler.
+async function akisliSor(mesaj, model, onOlay) {
+  const yanit = await fetch(tabani() + "/chat/akis", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({ mesaj, model }),
+  });
+  if (!yanit.ok) throw new Error("Akış başlatılamadı: HTTP " + yanit.status);
+
+  const okuyucu = yanit.body.getReader();
+  const cozucu = new TextDecoder();
+  let tampon = "";
+  let sonuc = null;
+
+  while (true) {
+    const { done, value } = await okuyucu.read();
+    if (done) break;
+    tampon += cozucu.decode(value, { stream: true });
+    const cerceveler = tampon.split("\n\n");
+    tampon = cerceveler.pop() ?? "";
+    for (const cerceve of cerceveler) {
+      const olay = cerceveyiCoz(cerceve);
+      if (!olay) continue;
+      if (olay.tip === "bitti") sonuc = olay.veri;
+      else if (olay.tip === "hata") throw new Error(olay.veri.mesaj ?? "Akış hatası");
+      // Sunucu {zaman, tip, veri} zarfı gönderir; adım alanları içteki `veri`dedir.
+      else onOlay(olay.tip, olay.veri?.veri ?? {});
+    }
+  }
+  if (!sonuc) throw new Error("Akış cevap üretmeden bitti.");
+  return sonuc;
+}
+
+function cerceveyiCoz(cerceve) {
+  let tip = null;
+  let ham = null;
+  for (const satir of cerceve.split("\n")) {
+    if (satir.startsWith("event: ")) tip = satir.slice(7);
+    else if (satir.startsWith("data: ")) ham = satir.slice(6);
+  }
+  if (!tip || ham === null) return null;
+  try {
+    return { tip, veri: JSON.parse(ham) };
+  } catch {
+    return null; // bozuk çerçeve akışı durdurmamalı
+  }
+}
+
+// ---------- akış ----------
+
+async function sor(mesaj) {
+  if (mesguL || !mesaj.trim()) return;
+  mesguL = true;
+  gonderButonu.disabled = true;
+  girisKutusu.value = "";
+
+  balonEkle("ben", mesaj);                      // soru İSTEKTEN ÖNCE görünsün
+  const { balon, govde } = balonEkle("o", "");
+  govde.textContent = "düşünüyor…";
+  soruAyraciEkle(mesaj);
+  const baslangic = performance.now();
+
+  try {
+    const sonuc = await akisliSor(mesaj, modelSecici.value, (tip, veri) =>
+      olayEkle(olayKutusu, tip, veri, baslangic)
+    );
+    govde.textContent = "";
+    kalinlariUygula(govde, sonuc.cevap ?? "(boş cevap)");
+    araclariGoster(balon, sonuc.arac_cagrilari ?? [], sonuc.tur_sayisi ?? 0, sonuc.model ?? "");
+  } catch (hata) {
+    govde.textContent = "";
+    const uyari = document.createElement("span");
+    uyari.style.color = "var(--kotu)";
+    uyari.textContent = "Hata: " + hata.message +
+      "  (bağlantıyı ve sistemin ayakta olduğunu kontrol edin)";
+    govde.appendChild(uyari);
+  } finally {
+    mesguL = false;
+    gonderButonu.disabled = false;
+    asagiKaydir(sohbetKutusu);
+  }
+}
+
+// ---------- kurulum ----------
+
+ORNEK_SORULAR.forEach((soru) => {
+  const dugme = document.createElement("button");
+  dugme.textContent = soru;
+  dugme.onclick = () => sor(soru);
+  $("ornekler").appendChild(dugme);
+});
+
+// ---------- sekmeler ----------
+
+const SEKMELER = {
+  sohbet: { dugme: "sekmeSohbet", panel: "panelSohbet" },
+  olaylar: { dugme: "sekmeOlaylar", panel: "panelOlaylar" },
+};
+
+function sekmeyeGec(ad) {
+  aktifSekme = ad;
+  Object.entries(SEKMELER).forEach(([anahtar, { dugme, panel }]) => {
+    const secili = anahtar === ad;
+    $(dugme).setAttribute("aria-selected", String(secili));
+    $(panel).hidden = !secili;
+  });
+  if (ad === "olaylar") asagiKaydir(olayKutusu);
+  sayaciGuncelle();
+}
+
+$("sekmeSohbet").onclick = () => sekmeyeGec("sohbet");
+$("sekmeOlaylar").onclick = () => sekmeyeGec("olaylar");
+
+$("baglanButonu").onclick = baglantiyiDene;
+$("gonderButonu").onclick = () => sor(girisKutusu.value);
+$("temizleButonu").onclick = () => {
+  sohbetKutusu.innerHTML =
+    '<div class="bos">Henüz mesaj yok — yukarıdaki hazır sorulardan birine basın.</div>';
+  mesajVar = false;
+};
+$("olaylariTemizleButonu").onclick = () => {
+  olayKutusu.innerHTML =
+    '<div class="bos">Sohbet sekmesinden bir soru sorun; adımlar burada anlık akar.</div>';
+  olayVar = false;
+  olaySayisi = 0;
+  $("olayOzeti").textContent = "henüz olay yok";
+  sayaciGuncelle();
+};
+girisKutusu.onkeydown = (olay) => {
+  if (olay.key === "Enter" && !olay.shiftKey) {
+    olay.preventDefault();
+    sor(girisKutusu.value);
+  }
+};
+
+const kayitliAdres = localStorage.getItem(ADRES_ANAHTARI);
+if (kayitliAdres) adresKutusu.value = kayitliAdres;
+baglantiyiDene();
+</script>
+</body>
+</html>

@@ -138,7 +138,11 @@ services:
       ASISTAN_MOTOR: ${ASISTAN_MOTOR:-ollama}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # Panel 3000'de; tarayıcı farklı port'a istek atınca CORS ister.
-      ASISTAN_CORS_IZINLI_ORIGINLER: ${ASISTAN_CORS_IZINLI_ORIGINLER:-http://localhost:3000}
+      # "null": docs/asistan-deneme.html dosyadan (file://) açıldığında tarayıcı
+      # origin'i null yapar. Ekip denemesi için bilinçli gevşetme — bu izinle
+      # makinedeki HERHANGİ bir yerel HTML dosyası asistana istek atabilir.
+      # Demo/ekip ağı dışına açılacaksa bu değeri ortamdan daraltın.
+      ASISTAN_CORS_IZINLI_ORIGINLER: ${ASISTAN_CORS_IZINLI_ORIGINLER:-http://localhost:3000,null}
     ports:
       - "8100:8100"
     depends_on:
