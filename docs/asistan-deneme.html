@@ -122,6 +122,14 @@
     araçlarını çağırarak canlı veriye bakar. Bu sayfa kod okumadan denemeniz içindir.
   </p>
 
+  <!-- Proje sitesinden (GitHub Pages) bakanlar için: burada asistan yok. -->
+  <div class="not" id="onizlemeUyarisi" hidden>
+    <b>Bu bir önizlemedir.</b> Sayfayı proje sitesi üzerinden görüntülüyorsunuz;
+    asistan sizin bilgisayarınızda çalışmadığı için bağlanamaz. Gerçekten denemek
+    için depoyu klonlayıp aşağıdaki adımları izleyin, sonra
+    <code>docs/asistan-deneme.html</code> dosyasını <b>doğrudan</b> açın.
+  </div>
+
   <!-- ============ BAĞLANTI ============ -->
   <div class="kart">
     <div class="satir">
@@ -757,6 +765,11 @@ girisKutusu.onkeydown = (olay) => {
     sor(girisKutusu.value);
   }
 };
+
+// Proje sitesinde (iframe) veya http(s) üzerinden servis edilirken asistan
+// erişilemez; boş yere "bağlanamadı" göstermek yerine sebebini söyle.
+const onizlemeMi = window.self !== window.top || location.protocol.startsWith("http");
+if (onizlemeMi) $("onizlemeUyarisi").hidden = false;
 
 const kayitliAdres = localStorage.getItem(ADRES_ANAHTARI);
 if (kayitliAdres) adresKutusu.value = kayitliAdres;
