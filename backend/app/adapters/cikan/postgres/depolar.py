@@ -16,8 +16,10 @@ from app.adapters.cikan.postgres.tablolar import (
     HatAtamasiTablosu,
     KullaniciTablosu,
     OlcumTablosu,
+    OneriTablosu,
+    UyariTablosu,
 )
-from app.domain.modeller import Arac, CihazAtamasi, HatAtamasi, Kullanici, Olcum
+from app.domain.modeller import Arac, CihazAtamasi, HatAtamasi, Kullanici, Olcum, Oneri, Uyari
 
 OturumFabrikasi = async_sessionmaker[AsyncSession]
 
@@ -118,3 +120,95 @@ class PostgresKullaniciDeposu:
         if satir is None:
             return None
         return Kullanici(id=satir.id, eposta=satir.eposta, sifre_hash=satir.sifre_hash)
+
+
+class PostgresOneriDeposu:
+    """OneriDeposuPort implementasyonu."""
+
+    def __init__(self, oturum_fabrikasi: OturumFabrikasi) -> None:
+        self._oturum_fabrikasi = oturum_fabrikasi
+
+    async def ekle(self, oneriler: list[Oneri]) -> None:
+        async with self._oturum_fabrikasi() as oturum:
+            oturum.add_all(
+                [
+                    OneriTablosu(
+                        hat_id=o.hat_id,
+                        gun_no=o.gun_no,
+                        saat_baslangic=o.saat_baslangic,
+                        saat_bitis=o.saat_bitis,
+                        ortalama_doluluk=o.ortalama_doluluk,
+                        karsilastirma_ortalama_doluluk=o.karsilastirma_ortalama_doluluk,
+                        oneri_metni=o.oneri_metni,
+                        gerekce=o.gerekce,
+                        olusturulma_zamani=o.olusturulma_zamani,
+                    )
+                    for o in oneriler
+                ]
+            )
+            await oturum.commit()
+
+    async def son_oneriler(self, limit: int = 50) -> list[Oneri]:
+        ifade = (
+            select(OneriTablosu).order_by(OneriTablosu.olusturulma_zamani.desc()).limit(limit)
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.scalars(ifade)).all()
+        return [
+            Oneri(
+                id=s.id,
+                hat_id=s.hat_id,
+                gun_no=s.gun_no,
+                saat_baslangic=s.saat_baslangic,
+                saat_bitis=s.saat_bitis,
+                ortalama_doluluk=s.ortalama_doluluk,
+                karsilastirma_ortalama_doluluk=s.karsilastirma_ortalama_doluluk,
+                oneri_metni=s.oneri_metni,
+                gerekce=s.gerekce,
+                olusturulma_zamani=s.olusturulma_zamani,
+            )
+            for s in satirlar
+        ]
+
+
+class PostgresUyariDeposu:
+    """UyariDeposuPort implementasyonu."""
+
+    def __init__(self, oturum_fabrikasi: OturumFabrikasi) -> None:
+        self._oturum_fabrikasi = oturum_fabrikasi
+
+    async def ekle(self, uyarilar: list[Uyari]) -> None:
+        async with self._oturum_fabrikasi() as oturum:
+            oturum.add_all(
+                [
+                    UyariTablosu(
+                        hat_id=u.hat_id,
+                        ortalama_doluluk=u.ortalama_doluluk,
+                        ortalama_kisi=u.ortalama_kisi,
+                        uyari_metni=u.uyari_metni,
+                        gerekce=u.gerekce,
+                        olusturulma_zamani=u.olusturulma_zamani,
+                    )
+                    for u in uyarilar
+                ]
+            )
+            await oturum.commit()
+
+    async def son_uyarilar(self, limit: int = 50) -> list[Uyari]:
+        ifade = (
+            select(UyariTablosu).order_by(UyariTablosu.olusturulma_zamani.desc()).limit(limit)
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.scalars(ifade)).all()
+        return [
+            Uyari(
+                id=s.id,
+                hat_id=s.hat_id,
+                ortalama_doluluk=s.ortalama_doluluk,
+                ortalama_kisi=s.ortalama_kisi,
+                uyari_metni=s.uyari_metni,
+                gerekce=s.gerekce,
+                olusturulma_zamani=s.olusturulma_zamani,
+            )
+            for s in satirlar
+        ]

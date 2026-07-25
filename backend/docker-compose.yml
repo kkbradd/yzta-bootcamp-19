@@ -40,6 +40,8 @@ services:
       # Panel farklı origin'den çağırıyorsa izin verilen origin'leri buraya yaz (virgülle).
       # Varsayılan dev portları koda gömülü; prod'da mutlaka geçersiz kıl. "*" verilemez.
       # CORS_IZINLI_ORIGINLER: "https://panel.ornek.com"
+      # Öneri motoru: host ortamından geçirilir, dosyaya gömülmez.
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     ports:
       - "8000:8000"
     depends_on:

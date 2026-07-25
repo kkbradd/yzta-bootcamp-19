@@ -9,6 +9,7 @@ Tüm zaman alanları TIMESTAMPTZ (UTC). Kritik kurallar:
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     CheckConstraint,
     ForeignKey,
@@ -59,6 +60,30 @@ class DurakTablosu(Taban):
     boylam: Mapped[float]
 
 
+class HatDuraklariTablosu(Taban):
+    __tablename__ = "hat_duraklari"
+    __table_args__ = (
+        UniqueConstraint("hat_id", "sira", name="uq_hat_duraklari_hat_sira"),
+        UniqueConstraint("hat_id", "durak_id", name="uq_hat_duraklari_hat_durak"),
+        Index("ix_hat_duraklari_hat_sira", "hat_id", "sira"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"))
+    durak_id: Mapped[int] = mapped_column(ForeignKey("duraklar.id"))
+    sira: Mapped[int]
+
+
+class GuzergahTablosu(Taban):
+    __tablename__ = "guzergahlar"
+
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"), primary_key=True)
+    koordinatlar: Mapped[list] = mapped_column(JSON)  # [[enlem, boylam], ...]
+    mesafe_metre: Mapped[float]
+    sure_saniye: Mapped[float]
+    olusturulma_zamani: Mapped[datetime]
+
+
 class CihazTablosu(Taban):
     __tablename__ = "cihazlar"
     __table_args__ = (CheckConstraint(f"tip IN ({_CIHAZ_TIPLERI_SQL})", name="ck_cihazlar_tip"),)
@@ -99,6 +124,39 @@ class KullaniciTablosu(Taban):
     id: Mapped[int] = mapped_column(primary_key=True)
     eposta: Mapped[str] = mapped_column(unique=True)
     sifre_hash: Mapped[str]
+
+
+class OneriTablosu(Taban):
+    __tablename__ = "oneriler"
+    __table_args__ = (
+        Index("ix_oneriler_hat_olusturulma", "hat_id", text("olusturulma_zamani DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"))
+    gun_no: Mapped[int]
+    saat_baslangic: Mapped[int]
+    saat_bitis: Mapped[int]
+    ortalama_doluluk: Mapped[float]
+    karsilastirma_ortalama_doluluk: Mapped[float | None]
+    oneri_metni: Mapped[str]
+    gerekce: Mapped[str]
+    olusturulma_zamani: Mapped[datetime]
+
+
+class UyariTablosu(Taban):
+    __tablename__ = "uyarilar"
+    __table_args__ = (
+        Index("ix_uyarilar_hat_olusturulma", "hat_id", text("olusturulma_zamani DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hat_id: Mapped[int] = mapped_column(ForeignKey("hatlar.id"))
+    ortalama_doluluk: Mapped[float]
+    ortalama_kisi: Mapped[float]
+    uyari_metni: Mapped[str]
+    gerekce: Mapped[str]
+    olusturulma_zamani: Mapped[datetime]
 
 
 class OlcumTablosu(Taban):

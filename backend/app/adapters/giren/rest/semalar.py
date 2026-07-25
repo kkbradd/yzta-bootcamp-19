@@ -13,6 +13,7 @@ class HatOzeti(BaseModel):
     ortalama_doluluk: float | None
     seviye: str | None
     arac_sayisi: int
+    durak_sayisi: int = 0
 
 
 class AracAnlikDurumu(BaseModel):
@@ -36,6 +37,21 @@ class OlcumYaniti(BaseModel):
     doluluk_orani: float | None
     seviye: str | None
     olcum_zamani: datetime
+
+
+class DurakYaniti(BaseModel):
+    id: int
+    ad: str
+    enlem: float
+    boylam: float
+    hat_kodlari: list[str] = []
+
+
+class HatGuzergahYaniti(BaseModel):
+    duraklar: list[DurakYaniti]
+    koordinatlar: list[tuple[float, float]]
+    mesafe_metre: float | None
+    sure_saniye: float | None
 
 
 class CihazYaniti(BaseModel):
@@ -105,3 +121,32 @@ class OturumAcIstegi(BaseModel):
 class OturumYaniti(BaseModel):
     erisim_tokeni: str
     token_tipi: Literal["bearer"] = "bearer"
+
+
+# ---- Öneriler ----
+
+
+class OneriYaniti(BaseModel):
+    id: int | None
+    hat_id: int
+    gun_no: int
+    saat_baslangic: int
+    saat_bitis: int
+    ortalama_doluluk: float
+    karsilastirma_ortalama_doluluk: float | None
+    oneri_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime
+
+
+# ---- Son Uyarılar ----
+
+
+class UyariYaniti(BaseModel):
+    id: int | None
+    hat_id: int
+    ortalama_doluluk: float
+    ortalama_kisi: float
+    uyari_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime

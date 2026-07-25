@@ -36,6 +36,26 @@ class Durak:
 
 
 @dataclass(frozen=True, slots=True)
+class HatDuragi:
+    """Bir hattın sıralı durak listesindeki tek satır (many-to-many + sıra)."""
+
+    id: int
+    hat_id: int
+    durak_id: int
+    sira: int
+
+
+@dataclass(frozen=True, slots=True)
+class Guzergah:
+    """Bir hattın OSRM'den üretilmiş yol geometrisi (tek seferlik hesaplanır)."""
+
+    hat_id: int
+    koordinatlar: list[tuple[float, float]]  # [(enlem, boylam), ...]
+    mesafe_metre: float
+    sure_saniye: float
+
+
+@dataclass(frozen=True, slots=True)
 class Cihaz:
     id: str
     tip: str  # CIHAZ_TIPLERI'nden biri
@@ -66,6 +86,35 @@ class Kullanici:
     id: int
     eposta: str
     sifre_hash: str
+
+
+@dataclass(frozen=True, slots=True)
+class Oneri:
+    """LLM'in bir hat×gün×saat_dilimi örüntüsü için ürettiği operasyonel yorum."""
+
+    hat_id: int
+    gun_no: int  # 0=Pazar..6=Cumartesi (PostgreSQL EXTRACT(DOW) ile birebir)
+    saat_baslangic: int  # 0-23, kova başlangıcı
+    saat_bitis: int  # 0-23, kova bitişi (üst açık)
+    ortalama_doluluk: float
+    karsilastirma_ortalama_doluluk: float | None
+    oneri_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime
+    id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Uyari:
+    """LLM'in son birkaç saatlik anlık yoğunluk durumu için ürettiği operasyonel uyarı."""
+
+    hat_id: int
+    ortalama_doluluk: float
+    ortalama_kisi: float
+    uyari_metni: str
+    gerekce: str
+    olusturulma_zamani: datetime
+    id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

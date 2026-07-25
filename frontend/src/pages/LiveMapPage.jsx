@@ -1,7 +1,9 @@
 import { useClock } from '../hooks/useClock'
+import CanliHarita from '../components/CanliHarita'
 
 export default function LiveMapPage({ onNavigate }) {
   const time = useClock()
+
   return (
     <div style={s.root}>
       {/* Sidebar */}
@@ -75,7 +77,6 @@ export default function LiveMapPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Map placeholder */}
         <div style={s.content}>
           <div style={s.mapCard}>
             <div style={s.cardHeader}>
@@ -84,10 +85,8 @@ export default function LiveMapPage({ onNavigate }) {
                 <div style={s.cardSubtitle}>Gerçek zamanlı araç doluluk oranları ve durak durumu</div>
               </div>
             </div>
-            <div style={s.mapPlaceholder}>
-              <div style={s.mapPlaceholderIcon}>🗺</div>
-              <div style={s.mapPlaceholderText}>Harita görünümü</div>
-              <div style={s.mapPlaceholderSub}>Gerçek zamanlı harita entegrasyonu yakında</div>
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <CanliHarita />
             </div>
           </div>
         </div>
@@ -125,15 +124,11 @@ const s = {
   topbarDivider: { width: '1px', height: '16px', background: '#e5e7eb' },
   topbarMeta: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#6b7280' },
   avatar: { width: '34px', height: '34px', borderRadius: '50%', background: '#111827', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '600' },
-  content: { flex: 1, overflow: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
-  mapCard: { flex: 1, background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' },
+  content: { flex: 1, overflow: 'hidden', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
+  mapCard: { flex: 1, minHeight: 0, background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexShrink: 0 },
   cardTitle: { fontSize: '14px', fontWeight: '700', color: '#111827' },
   cardSubtitle: { fontSize: '12px', color: '#9ca3af', marginTop: '2px' },
-  mapPlaceholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '340px', border: '1.5px dashed #e5e7eb', borderRadius: '8px', gap: '8px' },
-  mapPlaceholderIcon: { fontSize: '32px', opacity: 0.3 },
-  mapPlaceholderText: { fontSize: '14px', fontWeight: '500', color: '#9ca3af' },
-  mapPlaceholderSub: { fontSize: '12px', color: '#d1d5db' },
   footer: { padding: '12px 24px', borderTop: '1px solid #e5e7eb', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#9ca3af', flexShrink: 0 },
   footerLink: { color: '#9ca3af', textDecoration: 'none' },
 }
