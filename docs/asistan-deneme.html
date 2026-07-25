@@ -131,10 +131,10 @@
       <span class="rozet" id="durumRozeti">denenmedi</span>
     </div>
     <div class="dipnot" id="baglantiNotu">
-      Bu dosya kendi başına çalışır — bilgisayarınıza indirip çift tıklamanız yeter.
-      Sistem <b>başka birinin</b> makinesinde çalışıyorsa <code>localhost</code> yerine
-      o kişinin yerel IP'sini yazın (örn. <code>http://192.168.1.102:8100</code>) ve
-      <b>Bağlan</b>'a basın; aynı ağda olmanız gerekir. Adres tarayıcınıza kaydedilir.
+      Sistemi <b>kendi bilgisayarınızda</b> çalıştırdığınız sürece bu adres doğrudur;
+      değiştirmenize gerek yok. <b>Bağlan</b>'a basıp rozetin
+      <span class="rozet iyi">bağlı</span> olmasını bekleyin. (Adres tarayıcınıza
+      kaydedilir.)
     </div>
   </div>
 
@@ -143,22 +143,37 @@
   <div class="kart">
     <ol class="adimlar">
       <li>
-        <b>Sistemin ayakta olduğundan emin olun.</b><br>
-        Projeyi çalıştıran kişi <code>docker compose --profile gercek up -d</code>
-        komutunu vermiş olmalı. Yukarıdaki <b>Bağlan</b> düğmesine basın; rozet
-        <span class="rozet iyi">bağlı</span> olmalı.
+        <b>Sistemi kendi bilgisayarınızda ayağa kaldırın.</b><br>
+        Depoyu klonlayıp kök dizinde:
+        <pre>git clone https://github.com/kkbradd/yzta-bootcamp-19
+cd yzta-bootcamp-19
+docker compose --profile demo up --build</pre>
+        <b>İlk açılış uzun sürer</b> (~10–15 dk): Ollama, dil modelini (~1 GB)
+        indirir. Terminalde <code>asistan</code> satırları akmaya başlayınca
+        hazırdır. Sonraki açılışlar hızlıdır.
+        <div class="not bilgi" style="margin:10px 0 0">
+          Gereksinim: <b>Docker Desktop</b> ve Docker'a ayrılmış <b>en az 8 GB</b>
+          bellek. Model işlemcide çalışıyor — makine yavaşsa cevaplar da yavaş gelir.
+        </div>
+      </li>
+      <li>
+        <b>Bu sayfayı açıp bağlanın.</b><br>
+        Dosyaya çift tıklayın, yukarıdaki <b>Bağlan</b> düğmesine basın; rozet
+        <span class="rozet iyi">bağlı</span> olmalı. Adres <code>localhost</code>
+        kalır — sistem sizin makinenizde çalışıyor.
       </li>
       <li>
         <b>Model seçin.</b><br>
-        Varsayılan <b>Qwen 3.5 0.8B</b> hazır kuruludur ve hızlıdır. Daha büyük
-        modeller ilk seçimde indirilir (birkaç dakika sürebilir); indirilmemiş
-        olanlar listede işaretlidir.
+        Varsayılan <b>Qwen 3.5 0.8B</b> ilk açılışta otomatik indirilir ve en
+        hızlısıdır — olduğu gibi bırakabilirsiniz. Listedeki büyük modeller
+        <i>"— indirilecek"</i> ibaresi taşır; seçerseniz o an indirilir
+        (birkaç dakika). Büyük model daha isabetli cevap verir ama yavaştır.
       </li>
       <li>
         <b>Hazır sorulardan biriyle başlayın.</b><br>
-        Aşağıdaki düğmeler gerçek verisi olan hatları sorar. İlk cevap
-        <b>10–40 saniye</b> sürebilir — model bilgisayarın işlemcisinde çalışıyor,
-        ekran donmuş değildir.
+        <i>"Şu an en yoğun hat hangisi?"</i> ile başlamak en iyisi — hangi hatlarda
+        veri olduğunu da gösterir. İlk cevap <b>10–40 saniye</b> sürebilir; model
+        bilgisayarınızın işlemcisinde çalışıyor, ekran donmuş değildir.
       </li>
       <li>
         <b>Cevabın altındaki araç etiketine bakın.</b><br>
@@ -294,9 +309,11 @@
     </table>
 
     <div class="not bilgi">
-      <b>Veri olan hatlar:</b> 15, 15A, 15B, 15C, 15E. Diğer hatlar (15U, 15F, 15G,
-      15Y, 15R, 15S) tanımlı ama şu an ölçüm göndermiyor — onları sorarsanız
-      "veri yok" cevabı almanız <b>doğru</b> davranıştır.
+      <b>Hangi hatlarda veri var?</b> Sistemde 11 Üsküdar hattı tanımlı ama
+      simülatör hepsini beslemez — genelde <b>5 hatta</b> canlı ölçüm olur
+      (15, 15A, 15B, 15C, 15E). Kalanları sorarsanız "veri yok" cevabı almanız
+      <b>doğru</b> davranıştır, hata değil. Güncel listeyi <i>"Şu an en yoğun hat
+      hangisi?"</i> sorusuyla görebilirsiniz.
     </div>
 
     <div class="not">
@@ -333,8 +350,9 @@
       <tr><th>Belirti</th><th>Sebep / çözüm</th></tr>
       <tr>
         <td>Rozet <span class="rozet kotu">bağlanamadı</span></td>
-        <td>Sistem ayakta değil ya da adres yanlış. Sunucuyu çalıştıran kişiye
-            sorun; <code>localhost</code> yerine onun IP'sini deneyin.</td>
+        <td><code>docker compose --profile demo up</code> hâlâ çalışıyor olmalı.
+            Terminalde hata var mı bakın; ilk açılışta model inerken bir süre
+            bağlanamayabilirsiniz.</td>
       </tr>
       <tr>
         <td>Cevap çok geç geliyor</td>
@@ -348,8 +366,9 @@
       </tr>
       <tr>
         <td>Tüm hatlar "veri yok"</td>
-        <td>Simülatör/edge durmuş olabilir. Sunucu sahibine
-            <code>docker compose ps</code> baktırın.</td>
+        <td><code>--profile demo</code> ile başlatmayı unutmuş olabilirsiniz;
+            simülatör o profilde çalışır. <code>docker compose ps</code> ile
+            <code>simulator</code> satırını kontrol edin.</td>
       </tr>
       <tr>
         <td>Model listesi boş</td>
