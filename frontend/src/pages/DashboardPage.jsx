@@ -84,17 +84,28 @@ export default function DashboardPage({ onNavigate }) {
   const [trendVerisi, setTrendVerisi] = useState([])
   const [trendAsama, setTrendAsama] = useState('yukleniyor') // 'yukleniyor' | 'hazir' | 'demo'
   const [son12SaatOrtDoluluk, setSon12SaatOrtDoluluk] = useState(null)
-  const [yogunHatSayisi, setYogunHatSayisi] = useState(null)
 
   useEffect(() => {
     let iptal = false
     onerileriGetir()
       .then((veri) => { if (!iptal) setOneriler(veri) })
       .catch(() => { if (!iptal) setOneriler(DEMO_ONERILER) })
-    hatlariGetir()
+    return () => { iptal = true }
+  }, [])
+
+  // Hatlar (ve Redis anlık durumdan gelen seviye/ortalamaDoluluk) periyodik
+  // olarak yeniden çekilir: CanliYolculukUret 15dk'da bir yeni ölçüm ürettiği
+  // için sayfa açık kaldığı sürece "Yoğun Hat" KPI'ı bir sonraki turu WS
+  // beklemeden (ilk açılışta REST'ten dolu gelir, sonra periyodik tazelenir)
+  // yakalasın diye.
+  useEffect(() => {
+    let iptal = false
+    const cek = () => hatlariGetir()
       .then((veri) => { if (!iptal) setHatlar(veri) })
       .catch(() => { if (!iptal) setHatlar([]) })
-    return () => { iptal = true }
+    cek()
+    const zamanlayici = setInterval(cek, 60_000)
+    return () => { iptal = true; clearInterval(zamanlayici) }
   }, [])
 
   // hat_id -> gerçek hat kodu ("15S" gibi) eşlemesi; uyarı kartı başlığı
@@ -108,19 +119,15 @@ export default function DashboardPage({ onNavigate }) {
     return () => { iptal = true }
   }, [hatlar])
 
-  // "Ort. Doluluk" ve "Yoğun Hat" KPI'ları: grafikteki seçili aralıktan
-  // bağımsız, her zaman son 12 saatin verisiyle hesaplanır (backfill
-  // sayesinde simulator/edge kapalıyken de dolu gelir — canlı WS verisine
-  // bağımlı değil). Hat başına ayrı sorgu: "yoğun hat" tanımı hat bazında
-  // (>%70 ortalama doluluk, backend'in seviye_orta_ust eşiğiyle tutarlı).
+  // "Ort. Doluluk": grafikteki seçili aralıktan bağımsız, her zaman son 12
+  // saatin verisiyle hesaplanır (backfill sayesinde canlı WS verisine bağımlı
+  // değil, her zaman dolu gelir).
   useEffect(() => {
     if (hatlar.length === 0) return
     let iptal = false
     Promise.all(hatlar.map((h) => trendGetir(String(h.hat_id), '12h', hatlar)))
       .then((hatTrendleri) => {
         if (iptal) return
-
-        // Genel ortalama doluluk: tüm hatların tüm kovaları ağırlıklı ortalama.
         const tumNoktalar = hatTrendleri.flat().filter((n) => n.ortalama_doluluk != null)
         if (tumNoktalar.length === 0) {
           setSon12SaatOrtDoluluk(null)
@@ -131,25 +138,8 @@ export default function DashboardPage({ onNavigate }) {
           )
           setSon12SaatOrtDoluluk(toplamAgirlik ? agirlikliToplam / toplamAgirlik : null)
         }
-
-        // Yoğun hat: son 12 saatte hattın kendi ağırlıklı ortalama dolulugu
-        // %70'i (backend seviye_orta_ust) aşıyorsa "yoğun" sayılır.
-        const yogunHatSayisi = hatTrendleri.filter((noktalar) => {
-          const dolulukluNoktalar = noktalar.filter((n) => n.ortalama_doluluk != null)
-          if (dolulukluNoktalar.length === 0) return false
-          const agirlik = dolulukluNoktalar.reduce((sum, n) => sum + n.olcum_sayisi, 0)
-          const toplam = dolulukluNoktalar.reduce(
-            (sum, n) => sum + n.ortalama_doluluk * n.olcum_sayisi, 0
-          )
-          return agirlik > 0 && toplam / agirlik > 0.70
-        }).length
-        setYogunHatSayisi(yogunHatSayisi)
       })
-      .catch(() => {
-        if (iptal) return
-        setSon12SaatOrtDoluluk(null)
-        setYogunHatSayisi(null)
-      })
+      .catch(() => { if (!iptal) setSon12SaatOrtDoluluk(null) })
     return () => { iptal = true }
   }, [hatlar])
 
@@ -174,16 +164,26 @@ export default function DashboardPage({ onNavigate }) {
   const routes = [{ label: 'Tüm Hatlar', value: 'all' }, ...hatlar.map((h) => ({ label: h.code, value: String(h.hat_id) }))]
   const data = trendVerisi
   // Grafik ve "Toplam" aynı birimde: her nokta o zaman kovasındaki TOPLAM
-  // yolcu sayısı (toplam_kisi = ortalama_kisi × olcum_sayisi, api/trend.js'te
-  // hesaplanır). Toplam, noktaların basit toplamı — ekstra ağırlıklandırma
-  // gerekmez çünkü toplam_kisi zaten kova başına gerçek toplamdır.
+  // yolcu sayısı (toplam_kisi, backend'de SUM(kisi_sayisi) — o kovada geçen
+  // tüm seferlerde taşınan yolcuların toplamı). Toplam, noktaların basit
+  // toplamı — ekstra ağırlıklandırma gerekmez.
   const totalPassengers = Math.round(data.reduce((sum, d) => sum + d.toplam_kisi, 0))
 
   const olcumVar = Object.keys(araclar).length > 0
   const cevrimdisiSayisi = cevrimdisiCihazSayisi(cihazlar)
 
-  // Ort. Doluluk ve Yoğun Hat: son 12 saatlik backfill/gerçek ölçüm verisinden
-  // (bkz. yukarıdaki useEffect) — canlı WS bağlantısı olmasa da her zaman dolu.
+  // "Yoğun Hat": REST'ten (GET /api/hatlar, Redis anlık durumdan hesaplanır)
+  // gelen hat.durum alanına bakar — WS'e (araclar) bağımlı DEĞİLDİR. Sebep:
+  // CanliYolculukUret 15 dakikada bir ölçüm ürettiği için sayfa açılışında WS
+  // mesajı gelene kadar (en kötü ihtimalle ~15dk) '—' görünürdü; REST ise
+  // sayfa açılır açılmaz dolu gelir ve periyodik olarak tazelenir (bkz.
+  // yukarıdaki hatlar useEffect'i).
+  const yogunHatSayisi = hatlar.length
+    ? hatlar.filter((h) => h.durum === 'yuksek').length
+    : null
+
+  // Ort. Doluluk: son 12 saatlik backfill/gerçek ölçüm verisinden (bkz.
+  // yukarıdaki useEffect) — canlı WS bağlantısı olmasa da her zaman dolu.
   const ortDoluluk = son12SaatOrtDoluluk != null ? `%${Math.round(son12SaatOrtDoluluk * 100)}` : VERI_YOK
   const yogunSayisi = yogunHatSayisi != null ? String(yogunHatSayisi) : VERI_YOK
 
@@ -267,8 +267,8 @@ export default function DashboardPage({ onNavigate }) {
           <div style={styles.kpiGrid}>
             {[
               { label: 'TOPLAM HAT', value: toplamHatSayisi, change: '', icon: '✈', color: '#3b82f6' },
-              { label: 'YOĞUN HAT', value: yogunSayisi, change: 'Son 12s', icon: '👥', color: '#8b5cf6' },
-              { label: 'ORT. DOLULUK', value: ortDoluluk, change: 'Son 12s', icon: '📉', color: '#ef4444' },
+              { label: 'YOĞUN HAT', value: yogunSayisi, change: 'Canlı', icon: '👥', color: '#8b5cf6' },
+              { label: 'ORT. DOLULUK', value: ortDoluluk, change: 'Canlı', icon: '📉', color: '#ef4444' },
               { label: 'AKTİF ALARM', value: String(aktifAlarmSayisi), change: aktifAlarmSayisi > 0 ? 'Kritik' : '', icon: '⏰', color: '#ef4444', critical: aktifAlarmSayisi > 0 },
             ].map(kpi => (
               <div key={kpi.label} style={styles.kpiCard}>

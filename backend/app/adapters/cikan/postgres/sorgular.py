@@ -10,6 +10,8 @@ from sqlalchemy import Integer, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.cikan.postgres.tablolar import (
+    AracTablosu,
+    CihazAtamasiTablosu,
     CihazTablosu,
     DurakTablosu,
     GuzergahTablosu,
@@ -41,6 +43,11 @@ class PostgresSorgular:
     async def hat_trendi(
         self, hat_id: int, baslangic: datetime, bitis: datetime, aralik: str
     ) -> list[dict]:
+        """Her ölçüm satırı bağımsız bir sefer sayılır: toplam_kisi = SUM(kisi_sayisi).
+        Bunun anlamlı olması için ölçüm üretiminin (backfill + CanliYolculukUret)
+        gerçek sefer sıklığına (10-30dk) yakın kalması gerekir — bkz.
+        app/application/canli_yolculuk_uret.py HIZLANDIRMA_CARPANI.
+        """
         kova = func.date_bin(
             _ARALIK_GENISLIKLERI[aralik], OlcumTablosu.olcum_zamani, _KOVA_BASLANGICI
         ).label("zaman")
@@ -49,6 +56,7 @@ class PostgresSorgular:
                 kova,
                 func.avg(OlcumTablosu.doluluk_orani).label("ortalama_doluluk"),
                 func.avg(OlcumTablosu.kisi_sayisi).label("ortalama_kisi"),
+                func.sum(OlcumTablosu.kisi_sayisi).label("toplam_kisi"),
                 func.count().label("olcum_sayisi"),
             )
             .where(
@@ -133,6 +141,36 @@ class PostgresSorgular:
         async with self._oturum_fabrikasi() as oturum:
             satirlar = (await oturum.execute(ifade)).mappings().all()
         return [dict(s) for s in satirlar]
+
+    async def hat_arac_cihaz_eslemelerini_al(self) -> list[dict]:
+        """(hat_no, hat_id, arac_id, cihaz_id, kapasite) — güncel atamalardan okunur.
+        `gecmis_veri_yukle._hat_arac_cihaz_eslesmelerini_al` ile birebir aynı sorgu;
+        canlı yolculuk üretimi (bkz. app/application/canli_yolculuk_uret.py) de
+        aynı eşlemeye ihtiyaç duyar.
+        """
+        ifade = (
+            select(
+                HatTablosu.hat_no,
+                HatTablosu.id,
+                AracTablosu.id,
+                CihazTablosu.id,
+                AracTablosu.kapasite,
+            )
+            .join(HatAtamasiTablosu, HatAtamasiTablosu.hat_id == HatTablosu.id)
+            .join(AracTablosu, AracTablosu.id == HatAtamasiTablosu.arac_id)
+            .join(CihazAtamasiTablosu, CihazAtamasiTablosu.arac_id == AracTablosu.id)
+            .join(CihazTablosu, CihazTablosu.id == CihazAtamasiTablosu.cihaz_id)
+            .where(
+                HatAtamasiTablosu.bitis.is_(None),
+                CihazAtamasiTablosu.bitis.is_(None),
+            )
+        )
+        async with self._oturum_fabrikasi() as oturum:
+            satirlar = (await oturum.execute(ifade)).all()
+        return [
+            {"hat_no": hat_no, "hat_id": hat_id, "arac_id": arac_id, "cihaz_id": cihaz_id, "kapasite": kapasite}
+            for hat_no, hat_id, arac_id, cihaz_id, kapasite in satirlar
+        ]
 
     async def arac_olcumleri(
         self, arac_id: int, baslangic: datetime, bitis: datetime

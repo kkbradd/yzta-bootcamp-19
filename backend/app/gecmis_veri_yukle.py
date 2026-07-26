@@ -98,9 +98,9 @@ _DESEN_DISI_AGIRLIK = 0.80
 # seed.py'deki araç kapasitesiyle aynı olmalı: çarpanlar kişi sayısına bu
 # kapasite üzerinden çevrilir.
 ARAC_KAPASITESI = 60
-# Ayakta yolcuyla kapasite aşılabilir (İETT solo otobüs toplam kapasitesi 100'e
-# kadar çıkar); üst sınır kasıtlı olarak kapasitenin üstünde tutuldu.
-_AZAMI_KISI = 90
+# Ayakta yolcuyla kapasite hafifçe aşılabilir ama %150 (90 kişi) aşırı iddialıydı;
+# %120 (72 kişi) gerçek şehir içi otobüs deneyimine daha yakın bir üst sınır.
+_AZAMI_KISI = 72
 
 
 def _saat_carpani(zaman: datetime) -> float:

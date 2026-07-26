@@ -28,6 +28,7 @@ class TrendNoktasi(BaseModel):
     zaman: datetime
     ortalama_doluluk: float | None
     ortalama_kisi: float
+    toplam_kisi: int
     olcum_sayisi: int
 
 

@@ -31,6 +31,7 @@ from app.adapters.cikan.postgres.sorgular import PostgresSorgular
 from app.adapters.cikan.redis_baglanti import redis_istemcisi_olustur, redis_saglikli
 from app.adapters.cikan.redis_durum import RedisAnlikDurum
 from app.adapters.cikan.ws_yayin import BaglantiYoneticisi
+from app.adapters.giren.canli_yolculuk_zamanlayici import CanliYolculukZamanlayici
 from app.adapters.giren.konum_ureteci import KonumZamanlayici
 from app.adapters.giren.mqtt_ingest import MqttIngest
 from app.adapters.giren.oneri_zamanlayici import OneriZamanlayici
@@ -45,6 +46,7 @@ from app.adapters.giren.rest.tanimlar import tanimlar_router
 from app.adapters.giren.rest.uyarilar import uyarilar_router
 from app.adapters.giren.uyari_zamanlayici import UyariZamanlayici
 from app.adapters.giren.ws import ws_router
+from app.application.canli_yolculuk_uret import CanliYolculukUret
 from app.application.cihaz_durum_isle import CihazDurumIsleyici
 from app.application.konum_uret import KonumUret
 from app.application.olcum_isle import OlcumIsleyici, SeviyeEsikleri
@@ -139,6 +141,13 @@ def uygulama_olustur() -> FastAPI:
         konum_zamanlayici = KonumZamanlayici(konum_uret, periyot_sn=1.0)
         konum_zamanlayici_gorevi = asyncio.create_task(konum_zamanlayici.calistir())
 
+        # Giren adaptör: sistem açıkken de devam eden yolculuk üretimi (gerçek
+        # sefer sıklığı deseniyle, hızlandırılmış) — backfill yalnız geçmişi
+        # doldurur, bu görev olmadan zaman ilerledikçe yeni ölçüm oluşmazdı.
+        canli_yolculuk_uret = CanliYolculukUret(sorgular=sorgular, olcum_isleyici=olcum_isleyici)
+        canli_yolculuk_zamanlayici = CanliYolculukZamanlayici(canli_yolculuk_uret, periyot_sn=5.0)
+        canli_yolculuk_zamanlayici_gorevi = asyncio.create_task(canli_yolculuk_zamanlayici.calistir())
+
         uygulama.state.saglik_kontrolleri = {
             "postgres": lambda: postgres_saglikli(motor),
             "redis": lambda: redis_saglikli(redis),
@@ -169,6 +178,9 @@ def uygulama_olustur() -> FastAPI:
         konum_zamanlayici_gorevi.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await konum_zamanlayici_gorevi
+        canli_yolculuk_zamanlayici_gorevi.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await canli_yolculuk_zamanlayici_gorevi
         await redis.aclose()
         await motor.dispose()
 

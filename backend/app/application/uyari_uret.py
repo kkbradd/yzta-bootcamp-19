@@ -38,7 +38,23 @@ class UyariUret:
         if not yogun_ozet:
             logger.info("uyarı üretimi atlandı: yoğun hat yok")
             return []
-        uyarilar = await self.uyari_uretici.uret(yogun_ozet)
+
+        # Aynı hat, uyarı penceresi içinde zaten bir uyarı almışsa tekrar LLM'e
+        # gönderilmez: yoğunluk uzun sürdüğünde her tetiklemede neredeyse aynı
+        # anlamda yeni bir metin üretilip aynı hat için tekrar tekrar kart
+        # birikmesin diye (gereksiz LLM çağrısı da önlenir).
+        son_uyarilar = await self.uyari_deposu.son_uyarilar()
+        uyarili_hat_idleri = {
+            u.hat_id
+            for u in son_uyarilar
+            if u.olusturulma_zamani >= bitis - timedelta(hours=self.saat_pencere)
+        }
+        yeni_yogun_ozet = [s for s in yogun_ozet if s["hat_id"] not in uyarili_hat_idleri]
+        if not yeni_yogun_ozet:
+            logger.info("uyarı üretimi atlandı: yoğun hatların hepsi zaten uyarılı")
+            return []
+
+        uyarilar = await self.uyari_uretici.uret(yeni_yogun_ozet)
         if uyarilar:
             await self.uyari_deposu.ekle(uyarilar)
         return uyarilar
