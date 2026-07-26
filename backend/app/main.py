@@ -136,7 +136,7 @@ def uygulama_olustur() -> FastAPI:
 
         # Giren adaptör: aktif araçları güzergah üzerinde ilerleten konum üretimi
         konum_uret = KonumUret(guzergah_sorgusu=sorgular, canli_yayin=canli_yayin)
-        konum_zamanlayici = KonumZamanlayici(konum_uret, periyot_sn=2.0)
+        konum_zamanlayici = KonumZamanlayici(konum_uret, periyot_sn=1.0)
         konum_zamanlayici_gorevi = asyncio.create_task(konum_zamanlayici.calistir())
 
         uygulama.state.saglik_kontrolleri = {

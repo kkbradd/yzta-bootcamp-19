@@ -35,13 +35,14 @@ function uyariRengiBelirle(uyari) {
   return '#f59e0b'
 }
 
-// GET /api/uyarilar -> UI kart şekli.
-export async function uyarilariGetir(limit = 10) {
+// GET /api/uyarilar -> UI kart şekli. hatKodlari, hat_id -> gerçek hat kodu
+// (örn. "15S") eşlemesidir — verilmezse başlıkta sayısal id'ye düşülür.
+export async function uyarilariGetir(limit = 10, hatKodlari = {}) {
   const uyarilar = await apiGet(`/api/uyarilar?limit=${limit}`)
   return uyarilar.map((u) => ({
     id: u.id,
     hatId: u.hat_id,
-    title: `Hat ${u.hat_id}`,
+    title: `Hat ${hatKodlari[u.hat_id] ?? u.hat_id}`,
     desc: u.uyari_metni,
     time: new Date(u.olusturulma_zamani).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
     color: uyariRengiBelirle(u),
