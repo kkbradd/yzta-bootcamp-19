@@ -16,19 +16,14 @@ function araligiCoz(rangeValue) {
   return { baslangic: baslangic.toISOString(), bitis: bitis.toISOString(), aralik: eslesme.aralik }
 }
 
-// GET /api/hatlar/{hat_id}/trend -> tek hat trend noktaları. toplam_kisi,
-// backend'in döndürdüğü ortalama_kisi × olcum_sayisi'dir — kovadaki tüm
-// ölçümlerin toplamı (grafik ve "Toplam" etiketi bu alanı kullanır, ikisi
-// aynı birimde olsun diye; ortalama_kisi tek başına "bir ölçümdeki ortalama
-// kişi sayısı" anlamına geldiği için doğrudan toplanamaz).
+// GET /api/hatlar/{hat_id}/trend -> tek hat trend noktaları. toplam_kisi
+// backend'de SUM(kisi_sayisi) olarak hesaplanır: o kovada geçen TÜM seferlerde
+// taşınan yolcuların toplamıdır (ör. 15 dakikada 3 sefer olduysa, üçünün
+// toplamı) — "o zaman diliminde toplam kaç yolcu taşındı" sorusuna cevap verir.
 async function tekHatTrendi(hatId, rangeValue) {
   const { baslangic, bitis, aralik } = araligiCoz(rangeValue)
   const q = new URLSearchParams({ baslangic, bitis, aralik })
-  const noktalar = await apiGet(`/api/hatlar/${hatId}/trend?${q.toString()}`)
-  return noktalar.map((n) => ({
-    ...n,
-    toplam_kisi: n.ortalama_kisi * n.olcum_sayisi,
-  }))
+  return apiGet(`/api/hatlar/${hatId}/trend?${q.toString()}`)
 }
 
 // "Tüm Hatlar": backend'de agregasyon endpoint'i yok — N hat için paralel

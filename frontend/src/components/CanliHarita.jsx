@@ -7,6 +7,11 @@ import { duraklariGetir } from '../api/duraklar'
 import { hatlariGetir } from '../api/hatlar'
 import { hatGuzergahiniGetir } from '../api/guzergahlar'
 
+// Yalnızca Hat 15'in aracı (edge_0001) gerçek video + CSRNet ile besleniyor
+// (bkz. docs/edge-csrnet.md); diğer hatlar simüle edildiği için video yok.
+const VIDEOLU_HAT_KODU = '15'
+const VIDEO_YOLU = '/otobus.mp4'
+
 // Vite'da Leaflet'in varsayılan marker ikonları otomatik yüklenmez — CDN'den elle ayarlanır.
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -46,6 +51,7 @@ export default function CanliHarita({ style }) {
   const [duraklar, setDuraklar] = useState([])
   const [guzergahlar, setGuzergahlar] = useState([]) // [{ hatId, code, koordinatlar, renk }]
   const [hatKodlari, setHatKodlari] = useState({}) // { [hat_id]: '15A' }
+  const [videoAcikMi, setVideoAcikMi] = useState(false)
   const { aracKonumlari, aracDurumlari } = useCanliYayin()
 
   useEffect(() => {
@@ -75,7 +81,8 @@ export default function CanliHarita({ style }) {
   }, [])
 
   return (
-    <MapContainer center={USKUDAR_MERKEZ} zoom={13} style={{ height: '100%', width: '100%', borderRadius: '8px', ...style }}>
+    <>
+      <MapContainer center={USKUDAR_MERKEZ} zoom={13} style={{ height: '100%', width: '100%', borderRadius: '8px', ...style }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
@@ -95,12 +102,51 @@ export default function CanliHarita({ style }) {
 
       {Object.entries(aracKonumlari).map(([aracId, konum]) => {
         const seviye = aracDurumlari[aracId]?.seviye ?? 'seyrek'
+        const hatKodu = hatKodlari[konum.hat_id] ?? konum.hat_id
+        const videoluMu = hatKodu === VIDEOLU_HAT_KODU
         return (
           <Marker key={aracId} position={[konum.enlem, konum.boylam]} icon={aracIkonuOlustur(seviye)}>
-            <Popup>Araç #{aracId} — Hat {hatKodlari[konum.hat_id] ?? konum.hat_id}</Popup>
+            <Popup>
+              <div>Araç #{aracId} — Hat {hatKodu}</div>
+              {videoluMu && (
+                <button
+                  onClick={() => setVideoAcikMi(true)}
+                  style={{
+                    marginTop: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: 600,
+                    color: '#fff', background: '#111827', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                  }}
+                >
+                  📹 Canlı Görüntü
+                </button>
+              )}
+            </Popup>
           </Marker>
         )
       })}
     </MapContainer>
+
+      {videoAcikMi && (
+        <div
+          onClick={() => setVideoAcikMi(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000,
+          }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: '10px', padding: '12px', maxWidth: '90vw' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <strong style={{ fontSize: '14px' }}>Hat {VIDEOLU_HAT_KODU} — Canlı Görüntü</strong>
+              <button
+                onClick={() => setVideoAcikMi(false)}
+                style={{ border: 'none', background: 'transparent', fontSize: '16px', cursor: 'pointer', color: '#6b7280' }}
+              >
+                ✕
+              </button>
+            </div>
+            <video src={VIDEO_YOLU} controls autoPlay loop style={{ width: '480px', maxWidth: '100%', borderRadius: '6px' }} />
+          </div>
+        </div>
+      )}
+    </>
   )
 }

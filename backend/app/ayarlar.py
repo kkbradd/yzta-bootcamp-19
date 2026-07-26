@@ -17,11 +17,16 @@ class Ayarlar(BaseSettings):
     mqtt_host: str = "localhost"
     mqtt_port: int = 1883
 
-    seviye_seyrek_ust: float = 0.40
-    seviye_orta_ust: float = 0.70
+    # Kişi sayısı aralığına (5-85, ARAC_KAPASITESI=60) göre kalibre edildi:
+    # ~30 kişiye kadar seyrek, ~30-55 kişi orta, 55+ kişi yoğun.
+    seviye_seyrek_ust: float = 0.50
+    seviye_orta_ust: float = 0.92
 
-    redis_arac_ttl_sn: int = 30
-    redis_hat_ttl_sn: int = 60
+    # CanliYolculukUret 15 dakikada bir ölçüm üretiyor; TTL bu periyottan kısa
+    # olursa bir sonraki ölçüme kadar Redis'te hiçbir anlık durum kalmaz
+    # (harita/KPI '—' gösterir). Payı bolca tutmak için periyodun 2 katı.
+    redis_arac_ttl_sn: int = 20 * 60
+    redis_hat_ttl_sn: int = 20 * 60
 
     # Panel farklı origin'den (farklı port) çağırırsa tarayıcı CORS ister.
     # Virgülle ayrılmış origin listesi; prod'da tek origin (reverse proxy)
