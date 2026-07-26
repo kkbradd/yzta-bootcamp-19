@@ -88,9 +88,6 @@ export default function DashboardPage({ onNavigate }) {
 
   useEffect(() => {
     let iptal = false
-    uyarilariGetir()
-      .then((veri) => { if (!iptal) setUyarilar(veri) })
-      .catch(() => { if (!iptal) setUyarilar(DEMO_UYARILAR) })
     onerileriGetir()
       .then((veri) => { if (!iptal) setOneriler(veri) })
       .catch(() => { if (!iptal) setOneriler(DEMO_ONERILER) })
@@ -99,6 +96,17 @@ export default function DashboardPage({ onNavigate }) {
       .catch(() => { if (!iptal) setHatlar([]) })
     return () => { iptal = true }
   }, [])
+
+  // hat_id -> gerçek hat kodu ("15S" gibi) eşlemesi; uyarı kartı başlığı
+  // sayısal id yerine bunu göstersin diye hatlar yüklendikten sonra tetiklenir.
+  useEffect(() => {
+    let iptal = false
+    const hatKodlari = Object.fromEntries(hatlar.map((h) => [h.hat_id, h.code]))
+    uyarilariGetir(10, hatKodlari)
+      .then((veri) => { if (!iptal) setUyarilar(veri) })
+      .catch(() => { if (!iptal) setUyarilar(DEMO_UYARILAR) })
+    return () => { iptal = true }
+  }, [hatlar])
 
   // "Ort. Doluluk" ve "Yoğun Hat" KPI'ları: grafikteki seçili aralıktan
   // bağımsız, her zaman son 12 saatin verisiyle hesaplanır (backfill
