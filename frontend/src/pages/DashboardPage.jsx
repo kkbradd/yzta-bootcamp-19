@@ -140,6 +140,16 @@ export default function DashboardPage({ onNavigate }) {
   const yogunSayisi = olcumVar ? String(yogunAracSayisi(araclar)) : VERI_YOK
   const cevrimdisiSayisi = cevrimdisiCihazSayisi(cihazlar)
 
+  // Toplam/Aktif Hat, DB'deki hat listesinden hesaplanır (her zaman doğru,
+  // canlı veriye bağımlı değil). "Aktif" = güncel atamada en az 1 aracı olan
+  // hat — arac_sayisi Redis'ten (canlı) geldiği için simulator/edge kapalıyken
+  // 0 gösterir, bu doğru ve beklenen davranıştır.
+  const toplamHatSayisi = hatlar.length ? String(hatlar.length) : VERI_YOK
+  const aktifHatSayisi = hatlar.length
+    ? String(hatlar.filter((h) => h.buses > 0).length)
+    : VERI_YOK
+  const aktifAlarmSayisi = uyarilar.length
+
   return (
     <div style={styles.root}>
       {/* Sidebar */}
@@ -212,19 +222,21 @@ export default function DashboardPage({ onNavigate }) {
           {/* KPI Kartları */}
           <div style={styles.kpiGrid}>
             {[
-              { label: 'TOPLAM HAT', value: '142', change: '+2%', icon: '✈', color: '#3b82f6' },
-              { label: 'AKTİF HAT', value: '138', change: '-%0.5', icon: '⊟', color: '#10b981' },
+              { label: 'TOPLAM HAT', value: toplamHatSayisi, change: '', icon: '✈', color: '#3b82f6' },
+              { label: 'AKTİF HAT', value: aktifHatSayisi, change: 'Canlı', icon: '⊟', color: '#10b981' },
               { label: 'YOĞUN ARAÇ', value: yogunSayisi, change: 'Canlı', icon: '👥', color: '#8b5cf6' },
-              { label: 'YOĞUN DURAK', value: '45', change: '+5%', icon: '📍', color: '#f59e0b' },
+              { label: 'YOĞUN DURAK', value: VERI_YOK, change: '', icon: '📍', color: '#f59e0b' },
               { label: 'ORT. DOLULUK', value: ortDoluluk, change: 'Canlı', icon: '📉', color: '#ef4444' },
-              { label: 'AKTİF ALARM', value: '3', change: 'Kritik', icon: '⏰', color: '#ef4444', critical: true },
+              { label: 'AKTİF ALARM', value: String(aktifAlarmSayisi), change: aktifAlarmSayisi > 0 ? 'Kritik' : '', icon: '⏰', color: '#ef4444', critical: aktifAlarmSayisi > 0 },
             ].map(kpi => (
               <div key={kpi.label} style={styles.kpiCard}>
                 <div style={styles.kpiTop}>
                   <div style={{ ...styles.kpiIcon, background: kpi.color + '15', color: kpi.color }}>{kpi.icon}</div>
-                  <span style={{ ...styles.kpiBadge, background: kpi.critical ? '#fef2f2' : '#f9fafb', color: kpi.critical ? '#ef4444' : '#6b7280' }}>
-                    {kpi.change}
-                  </span>
+                  {kpi.change && (
+                    <span style={{ ...styles.kpiBadge, background: kpi.critical ? '#fef2f2' : '#f9fafb', color: kpi.critical ? '#ef4444' : '#6b7280' }}>
+                      {kpi.change}
+                    </span>
+                  )}
                 </div>
                 <div style={styles.kpiLabel}>{kpi.label}</div>
                 <div style={styles.kpiValue}>{kpi.value}</div>

@@ -28,7 +28,9 @@ def _interpolasyon(koordinatlar: list[tuple[float, float]], yuzde: float) -> tup
 class KonumUret:
     guzergah_sorgusu: GuzergahSorgusuPort
     canli_yayin: CanliYayinPort
-    adim_orani: float = 0.02  # her tetiklemede yüzde ilerleme (hız ayarı)
+    # Her tetiklemede yüzde ilerleme: KonumZamanlayici 1 sn'de bir tetikliyor,
+    # 1/360 ≈ tüm güzergahı ~6 dakikada tamamlar (akıcı, gerçekçi otobüs hızı).
+    adim_orani: float = 1 / 360
     _yuzdeler: dict[int, float] = field(default_factory=dict)
 
     async def tum_araclari_ilerlet(self) -> None:
