@@ -41,17 +41,6 @@ const formatXAxis = (zaman, range) => {
 // mock göstermek yanıltıcı olurdu ama tüm kartları canlıya bağlamak da kapsam dışı.
 const VERI_YOK = '—'
 
-function ortalamaDolulukYuzdesi(araclar) {
-  const oranlar = Object.values(araclar).map((a) => a.doluluk_orani).filter((o) => o != null)
-  if (oranlar.length === 0) return VERI_YOK
-  const ortalama = oranlar.reduce((toplam, oran) => toplam + oran, 0) / oranlar.length
-  return `%${Math.round(ortalama * 100)}`
-}
-
-function yogunAracSayisi(araclar) {
-  return Object.values(araclar).filter((a) => a.seviye === 'yogun').length
-}
-
 function cevrimdisiCihazSayisi(cihazlar) {
   return Object.values(cihazlar).filter((c) => c.cevrimici === false).length
 }
@@ -94,6 +83,8 @@ export default function DashboardPage({ onNavigate }) {
   const [hatlar, setHatlar] = useState([])
   const [trendVerisi, setTrendVerisi] = useState([])
   const [trendAsama, setTrendAsama] = useState('yukleniyor') // 'yukleniyor' | 'hazir' | 'demo'
+  const [son12SaatOrtDoluluk, setSon12SaatOrtDoluluk] = useState(null)
+  const [yogunHatSayisi, setYogunHatSayisi] = useState(null)
 
   useEffect(() => {
     let iptal = false
@@ -108,6 +99,51 @@ export default function DashboardPage({ onNavigate }) {
       .catch(() => { if (!iptal) setHatlar([]) })
     return () => { iptal = true }
   }, [])
+
+  // "Ort. Doluluk" ve "Yoğun Hat" KPI'ları: grafikteki seçili aralıktan
+  // bağımsız, her zaman son 12 saatin verisiyle hesaplanır (backfill
+  // sayesinde simulator/edge kapalıyken de dolu gelir — canlı WS verisine
+  // bağımlı değil). Hat başına ayrı sorgu: "yoğun hat" tanımı hat bazında
+  // (>%70 ortalama doluluk, backend'in seviye_orta_ust eşiğiyle tutarlı).
+  useEffect(() => {
+    if (hatlar.length === 0) return
+    let iptal = false
+    Promise.all(hatlar.map((h) => trendGetir(String(h.hat_id), '12h', hatlar)))
+      .then((hatTrendleri) => {
+        if (iptal) return
+
+        // Genel ortalama doluluk: tüm hatların tüm kovaları ağırlıklı ortalama.
+        const tumNoktalar = hatTrendleri.flat().filter((n) => n.ortalama_doluluk != null)
+        if (tumNoktalar.length === 0) {
+          setSon12SaatOrtDoluluk(null)
+        } else {
+          const toplamAgirlik = tumNoktalar.reduce((sum, n) => sum + n.olcum_sayisi, 0)
+          const agirlikliToplam = tumNoktalar.reduce(
+            (sum, n) => sum + n.ortalama_doluluk * n.olcum_sayisi, 0
+          )
+          setSon12SaatOrtDoluluk(toplamAgirlik ? agirlikliToplam / toplamAgirlik : null)
+        }
+
+        // Yoğun hat: son 12 saatte hattın kendi ağırlıklı ortalama dolulugu
+        // %70'i (backend seviye_orta_ust) aşıyorsa "yoğun" sayılır.
+        const yogunHatSayisi = hatTrendleri.filter((noktalar) => {
+          const dolulukluNoktalar = noktalar.filter((n) => n.ortalama_doluluk != null)
+          if (dolulukluNoktalar.length === 0) return false
+          const agirlik = dolulukluNoktalar.reduce((sum, n) => sum + n.olcum_sayisi, 0)
+          const toplam = dolulukluNoktalar.reduce(
+            (sum, n) => sum + n.ortalama_doluluk * n.olcum_sayisi, 0
+          )
+          return agirlik > 0 && toplam / agirlik > 0.70
+        }).length
+        setYogunHatSayisi(yogunHatSayisi)
+      })
+      .catch(() => {
+        if (iptal) return
+        setSon12SaatOrtDoluluk(null)
+        setYogunHatSayisi(null)
+      })
+    return () => { iptal = true }
+  }, [hatlar])
 
   const currentRange = timeRanges.find(r => r.value === selectedRange)
 
@@ -136,18 +172,18 @@ export default function DashboardPage({ onNavigate }) {
   const totalPassengers = Math.round(data.reduce((sum, d) => sum + d.toplam_kisi, 0))
 
   const olcumVar = Object.keys(araclar).length > 0
-  const ortDoluluk = ortalamaDolulukYuzdesi(araclar)
-  const yogunSayisi = olcumVar ? String(yogunAracSayisi(araclar)) : VERI_YOK
   const cevrimdisiSayisi = cevrimdisiCihazSayisi(cihazlar)
 
-  // Toplam/Aktif Hat, DB'deki hat listesinden hesaplanır (her zaman doğru,
-  // canlı veriye bağımlı değil). "Aktif" = güncel atamada en az 1 aracı olan
-  // hat — arac_sayisi Redis'ten (canlı) geldiği için simulator/edge kapalıyken
-  // 0 gösterir, bu doğru ve beklenen davranıştır.
+  // Ort. Doluluk ve Yoğun Hat: son 12 saatlik backfill/gerçek ölçüm verisinden
+  // (bkz. yukarıdaki useEffect) — canlı WS bağlantısı olmasa da her zaman dolu.
+  const ortDoluluk = son12SaatOrtDoluluk != null ? `%${Math.round(son12SaatOrtDoluluk * 100)}` : VERI_YOK
+  const yogunSayisi = yogunHatSayisi != null ? String(yogunHatSayisi) : VERI_YOK
+
+  // Toplam Hat, DB'deki hat listesinden hesaplanır (her zaman doğru, canlı
+  // veriye bağımlı değil).
   const toplamHatSayisi = hatlar.length ? String(hatlar.length) : VERI_YOK
-  const aktifHatSayisi = hatlar.length
-    ? String(hatlar.filter((h) => h.buses > 0).length)
-    : VERI_YOK
+  // Aktif Alarm: her zaman gerçek uyarı sayısı (backend'den çekilen uyarilar
+  // listesinin uzunluğu, demo fallback dahil).
   const aktifAlarmSayisi = uyarilar.length
 
   return (
@@ -223,10 +259,8 @@ export default function DashboardPage({ onNavigate }) {
           <div style={styles.kpiGrid}>
             {[
               { label: 'TOPLAM HAT', value: toplamHatSayisi, change: '', icon: '✈', color: '#3b82f6' },
-              { label: 'AKTİF HAT', value: aktifHatSayisi, change: 'Canlı', icon: '⊟', color: '#10b981' },
-              { label: 'YOĞUN ARAÇ', value: yogunSayisi, change: 'Canlı', icon: '👥', color: '#8b5cf6' },
-              { label: 'YOĞUN DURAK', value: VERI_YOK, change: '', icon: '📍', color: '#f59e0b' },
-              { label: 'ORT. DOLULUK', value: ortDoluluk, change: 'Canlı', icon: '📉', color: '#ef4444' },
+              { label: 'YOĞUN HAT', value: yogunSayisi, change: 'Son 12s', icon: '👥', color: '#8b5cf6' },
+              { label: 'ORT. DOLULUK', value: ortDoluluk, change: 'Son 12s', icon: '📉', color: '#ef4444' },
               { label: 'AKTİF ALARM', value: String(aktifAlarmSayisi), change: aktifAlarmSayisi > 0 ? 'Kritik' : '', icon: '⏰', color: '#ef4444', critical: aktifAlarmSayisi > 0 },
             ].map(kpi => (
               <div key={kpi.label} style={styles.kpiCard}>
@@ -462,7 +496,7 @@ const styles = {
   },
   main: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   content: { flex: 1, overflow: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
-  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' },
+  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' },
   kpiCard: {
     background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px',
     padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px',
