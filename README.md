@@ -726,12 +726,24 @@ npm run dev
   <details>
     <summary><h2>Product Screenshot</h2></summary>
 
+![Dashboard — Canlı Harita, AI Önerileri, Yolcu Yoğunluğu Trendi](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.07.25.png)
+![Dashboard — AI Önerileri ve YOTAY Asistan (gerçek veriyle tool çağrısı)](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.10.05.png)
+![Canlı Harita — tüm hatlar, gerçek güzergahlar ve araç konumları](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.15.23.png)
+![Hatlar — gerçek hat kodları ve doluluk seviyeleri](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.15.33.png)
+![Hat Detayı — 15U güzergahı ve durak akışı](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.15.48.png)
+![Canlı Harita — Hat 15 gerçek CSRNet video görüntüsü](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.16.15.png)
+![Duraklar — 31 durak ve geçen hatları](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.16.34.png)
+
   </details>
 
 ---
 
   <details>
     <summary><h2>Sprint Board Update</h2></summary>
+
+![Sprint 3 Burndown Chart](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.05.14.png)
+![Trello Board — Done for 3rd Sprint](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.09.04.png)
+![Trello Board — Done for 3rd Sprint (devamı) ve Rejected](assets/sprint3/Ekran%20Resmi%202026-08-01%2021.09.17.png)
 
   </details>
 
@@ -740,6 +752,10 @@ npm run dev
   <details>
     <summary><h2>Daily Scrum</h2></summary>
 
+![WhatsApp — Güzergah/Harita ve Backfill Koordinasyonu](assets/sprint3/Ekran%20Resmi%202026-08-01%2020.52.04.png)
+![WhatsApp — Model Entegrasyonu Koordinasyonu](assets/sprint3/Ekran%20Resmi%202026-08-01%2020.51.43.png)
+![WhatsApp — Proje Teslimi](assets/sprint3/Ekran%20Resmi%202026-08-01%2020.53.09.png)
+
   </details>
 
 ---
@@ -747,12 +763,84 @@ npm run dev
   <details>
     <summary><h2>Sprint Notes</h2></summary>
 
-  </details>
+- It was decided to replace the placeholder map with a real OpenStreetMap/Leaflet live map, seeding the database with a realistic Üsküdar-themed route network (10+ lines, real İETT-style stop names) instead of arbitrary mock data.
+- It was decided to move vehicle simulation onto the actual route geometry (OSRM-derived polylines), with a backend scheduler advancing each active vehicle along its line so the map reflects real movement instead of static markers.
+- It was decided to generate 30 days of historically realistic ridership data (varying trip frequency per line, per-line rush-hour/weekday patterns derived from İBB's public hourly ridership dataset) so the AI recommendation engine would have statistically meaningful patterns to detect, instead of a handful of live-only data points.
+- It was decided to make the historical backfill a "sliding window" job that reruns on every `docker compose up`, automatically topping up from the last recorded measurement to now — so a stopped/restarted container never leaves a data gap.
+- It was decided to connect the dashboard's passenger density trend chart to the real backend trend endpoint end-to-end, replacing the last remaining mock chart data, and to keep the chart and its "Total" label expressed in the same unit.
+- It was decided to reference lines by their real code (e.g. "15A") instead of their internal numeric ID everywhere a human reads the text — AI suggestion/alert wording, the dashboard alert cards, and the live map's vehicle popups.
+- It was decided to add a `CanliYolculukUret` background job so the system keeps producing new, realistic ridership measurements while it is running — not only during the one-time historical backfill — so the map, KPIs, trend chart, and alerts stay live instead of going stale between restarts.
+- It was decided to align this live generation to the wall clock (triggering exactly at :00/:15/:30/:45) and to randomize which lines are busy on a given round (within a fixed low/medium/high ratio) so congestion is visibly redistributed every quarter hour instead of being frozen to a fixed time-of-day pattern.
+- It was decided to simplify and rebuild the dashboard's KPI cards around what real data could reliably answer: dropping "Active Lines" and "Congested Stops" (out of scope for now), keeping "Congested Lines" and "Average Occupancy" driven by recent real measurements, and always showing the true count of "Active Alerts".
+- It was decided to build the CSRNet crowd-counting service into a real edge pipeline (`edge/`) that reads a video source, runs the trained model, and publishes people-count over MQTT using the same message contract as the simulator — so one real device can run alongside simulated ones in the same fleet.
+- It was decided to add a real-video playback feature on the live map: clicking the one vehicle actually fed by the CSRNet edge pipeline opens a small player showing its source footage, while simulated vehicles show no such control.
+- It was decided to fine-tune the Qwen 3.5 model and evaluate the CSRNet model's accuracy/mAP/loss formally, and to add a weather-model tool to the chatbot's OpenJarvis tool set, extending what operator questions the assistant can answer beyond congestion alone.
+
+- **Expected point completion within Sprint:** 400 points
+
+- **Point Completion Logic:** A total target of 1000 points was set. In Sprint 1, 200 points were targeted and completed as the focus was on research and planning. In Sprint 2, 400 points were targeted and completed as the development phase began. In Sprint 3, 400 points were targeted for moving the system from mock/demo data to fully live, end-to-end data; all 15 backlog stories tracked on the Sprint 3 burndown chart were completed within the 14-day window, bringing the remaining points to 0 by Day 14 and the cumulative total to 1000.
+
+- **Product Backlog URL:** [Click for Backlog](https://trello.com/b/2BtcZtM4/yzta-bootcamp)
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+- Yer tutucu haritanın yerine gerçek bir OpenStreetMap/Leaflet canlı haritası konulmasına, veritabanının rastgele mock veri yerine gerçekçi bir Üsküdar temalı güzergah ağıyla (10+ hat, gerçek İETT tarzı durak isimleri) tohumlanmasına karar verildi.
+- Araç simülasyonunun gerçek güzergah geometrisi (OSRM'den türetilmiş polyline'lar) üzerine taşınmasına, backend'deki bir zamanlayıcının her aktif aracı kendi hattı boyunca ilerletmesine karar verildi; böylece harita sabit işaretçiler yerine gerçek hareketi yansıtıyor.
+- AI öneri motorunun istatistiksel olarak anlamlı örüntüler yakalayabilmesi için (yalnızca birkaç canlı veri noktası yerine) 30 günlük, gerçekçi geçmiş yolculuk verisi (hat başına değişen sefer sıklığı, İBB'nin herkese açık saatlik yolculuk veri setinden türetilen hat başına zirve saat/haftaiçi örüntüleri) üretilmesine karar verildi.
+- Geçmişe dönük backfill'in her `docker compose up` çalıştığında yeniden çalışan bir "kayan pencere" işi olmasına, son kaydedilen ölçümden şu ana kadar otomatik tamamlama yapmasına karar verildi — böylece durdurulup yeniden başlatılan bir container hiçbir zaman veri boşluğu bırakmıyor.
+- Gösterge panelindeki yolcu yoğunluğu trend grafiğinin, geriye kalan son mock grafik verisinin yerine, uçtan uca gerçek backend trend uç noktasına bağlanmasına ve grafik ile "Toplam" etiketinin aynı birimde ifade edilmesine karar verildi.
+- Hatlara, bir insanın metni okuduğu her yerde (AI öneri/uyarı metinleri, gösterge paneli uyarı kartları, canlı haritadaki araç popup'ları) iç sayısal ID yerine gerçek hat koduyla (ör. "15A") referans verilmesine karar verildi.
+- Sistem çalışırken de gerçekçi, yeni yolculuk ölçümleri üretmeye devam eden bir `CanliYolculukUret` arka plan görevi eklenmesine karar verildi — yalnızca tek seferlik geçmiş backfill sırasında değil; böylece harita, KPI'lar, trend grafiği ve uyarılar, yeniden başlatmalar arasında bayatlamak yerine canlı kalıyor.
+- Bu canlı üretimin duvar saatine hizalanmasına (tam olarak :00/:15/:30/:45'te tetiklenmesine) ve her turda hangi hatların yoğun olduğunun (sabit bir düşük/orta/yüksek oranı içinde) rastgele belirlenmesine karar verildi; böylece yoğunluk sabit bir günün-saati örüntüsüne kilitlenmek yerine her çeyrek saatte görünür şekilde yeniden dağılıyor.
+- Gösterge panelinin KPI kartlarının, gerçek verinin güvenilir şekilde cevaplayabildiği şeyler etrafında sadeleştirilip yeniden kurulmasına karar verildi: "Aktif Hat" ve "Yoğun Durak" kaldırıldı (şimdilik kapsam dışı), "Yoğun Hat" ve "Ortalama Doluluk" son gerçek ölçümlerden besleniyor, "Aktif Alarm" her zaman gerçek sayıyı gösteriyor.
+- CSRNet kalabalık sayım servisinin, bir video kaynağını okuyup eğitilmiş modeli çalıştıran ve kişi sayısını simülatörle aynı mesaj sözleşmesini kullanarak MQTT üzerinden yayınlayan gerçek bir uç (edge) hattına (`edge/`) dönüştürülmesine karar verildi — böylece aynı filoda bir gerçek cihaz simüle edilenlerle birlikte çalışabiliyor.
+- Canlı haritaya gerçek video oynatma özelliği eklenmesine karar verildi: CSRNet uç hattı tarafından gerçekten beslenen tek araca tıklanınca kaynak görüntüyü gösteren küçük bir oynatıcı açılıyor, simüle edilen araçlarda böyle bir kontrol hiç görünmüyor.
+- Qwen 3.5 modelinin fine-tune edilmesine, CSRNet modelinin doğruluk/mAP/loss değerlerinin biçimsel olarak değerlendirilmesine ve chatbot'un OpenJarvis araç setine bir hava durumu modeli aracı eklenmesine karar verildi; böylece asistanın yanıtlayabildiği operatör soruları yalnızca yoğunlukla sınırlı kalmayıp genişletildi.
+
+- **Sprint İçinde Tamamlanması Beklenen Puan:** 400 puan
+
+- **Puan Tamamlama Mantığı:** Toplam hedef 1000 puan olarak belirlenmiştir. Sprint 1'de araştırma ve planlama odaklı çalışıldığı için 200 puan hedeflenmiş ve tamamlanmıştır. Sprint 2'de geliştirme aşamasına geçilmiş ve 400 puan hedeflenip tamamlanmıştır. Sprint 3'te sistemi mock/demo veriden uçtan uca tamamen canlı veriye taşımak için 400 puan hedeflenmiştir; Sprint 3 burndown chart'ta takip edilen 15 backlog story'nin tamamı 14 günlük pencerede tamamlanarak kalan puan 14. günde 0'a indirilmiş, kümülatif toplam 1000'e ulaşmıştır.
+
+- **Product Backlog URL:** [Backlog için tıklayın](https://trello.com/b/2BtcZtM4/yzta-bootcamp)
+
+</details>
 
 ---
 
   <details>
     <summary><h2>Sprint Review</h2></summary>
+
+- The static placeholder map was replaced end-to-end with a real OpenStreetMap/Leaflet live map: a realistic Üsküdar route network (11 lines with real-style stop names) was seeded, OSRM-derived route geometry was stored per line, and a backend scheduler now advances every active vehicle along its actual route polyline in real time.
+- The live map's vehicle markers were made data-driven: color (green/yellow/red) reflects the vehicle's current occupancy level, and clicking a marker shows its real line code and, for the one CSRNet-fed vehicle, a working video-playback popup of its source footage.
+- A 30-day historical backfill was built using real hourly ridership multipliers derived from İBB's public transit dataset, combined with a per-line congestion pattern (some lines busy weekday mornings, some evenings, some on specific weekdays) — giving the AI recommendation engine genuine, statistically detectable patterns instead of near-empty tables.
+- The backfill was turned into a self-healing "sliding window" job: every `docker compose up` deletes data older than 30 days and tops up from the last known measurement to now, so the system is always fresh regardless of how long it was left stopped.
+- A new `CanliYolculukUret` background service was added so ridership keeps being generated while the system is running, not only during the one-off backfill; it triggers exactly on the wall-clock quarter hour (:00/:15/:30/:45), and each round randomly redistributes which lines run low/medium/high — so the live map, KPIs, and trend chart all keep changing realistically hour after hour.
+- The dashboard's passenger density trend chart was connected to the real backend trend endpoint for every time range (12h/24h/3d/7d/30d) and for both single-line and all-lines views, with the chart and its "Total" figure now expressed in the same, verified unit.
+- The dashboard's KPI row was rebuilt around what live data could answer reliably: "Active Lines" and "Congested Stops" were removed, "Congested Lines" and "Average Occupancy" are now computed from recent real measurements, and "Active Alerts" always reflects the true alert count.
+- Every place where a line is referenced in human-readable text — AI suggestion and alert wording, dashboard alert cards, live map popups — was switched from the internal numeric line ID to the real line code (e.g. "15A"), fixing a recurring confusion where alerts referenced a line number that didn't exist in the UI.
+- The CSRNet crowd-counting model was wired into a real edge pipeline (`edge/`) that reads an actual video source, runs inference, and publishes people-counts over MQTT using the same contract as the simulator — allowing one real camera-fed vehicle to run side by side with simulated ones in the same fleet.
+- The alert-generation engine was made idempotent within its lookback window, so a line that stays congested for an extended period no longer produces a new, nearly-identical alert every cycle.
+
+- **Sprint Review Participants:** Bilal Solmaz, Kübra Güler, Saadettin Berber, Özlem Çal, Pınar Akdoğan
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+- Statik yer tutucu harita, uçtan uca gerçek bir OpenStreetMap/Leaflet canlı haritasıyla değiştirildi: gerçekçi bir Üsküdar güzergah ağı (gerçekçi durak isimleriyle 11 hat) tohumlandı, hat başına OSRM'den türetilmiş güzergah geometrisi kaydedildi ve backend'deki bir zamanlayıcı artık her aktif aracı gerçek zamanlı olarak kendi güzergah polyline'ı boyunca ilerletiyor.
+- Canlı haritadaki araç işaretçileri veri odaklı hale getirildi: renk (yeşil/sarı/kırmızı) aracın o anki doluluk seviyesini yansıtıyor, bir işaretçiye tıklamak gerçek hat kodunu gösteriyor ve CSRNet ile beslenen tek araç için kaynak görüntüsünü oynatan çalışan bir video popup'ı açılıyor.
+- İBB'nin herkese açık toplu ulaşım veri setinden türetilen gerçek saatlik yolculuk çarpanları ve hat başına yoğunluk deseni (bazı hatlar haftaiçi sabahları, bazıları akşamları, bazıları belirli haftanın günlerinde yoğun) birleştirilerek 30 günlük bir geçmiş backfill oluşturuldu — AI öneri motoruna neredeyse boş tablolar yerine gerçek, istatistiksel olarak tespit edilebilir örüntüler kazandırıldı.
+- Backfill kendi kendini onaran bir "kayan pencere" işine dönüştürüldü: her `docker compose up` çalıştığında 30 günden eski veri silinir ve son bilinen ölçümden şu ana kadar tamamlanır; böylece sistem ne kadar süre kapalı kalırsa kalsın her zaman güncel.
+- Yalnızca tek seferlik backfill sırasında değil, sistem çalışırken de yolculuk verisi üretmeye devam eden yeni bir `CanliYolculukUret` arka plan servisi eklendi; tam olarak duvar saatinin çeyreklerinde (:00/:15/:30/:45) tetikleniyor ve her turda hangi hatların düşük/orta/yüksek yoğunlukta olduğunu rastgele yeniden dağıtıyor — böylece canlı harita, KPI'lar ve trend grafiği saatler boyunca gerçekçi şekilde değişmeye devam ediyor.
+- Gösterge panelinin yolcu yoğunluğu trend grafiği, her zaman aralığı (12s/24s/3g/7g/30g) ve hem tekil hat hem tüm hatlar görünümü için gerçek backend trend uç noktasına bağlandı; grafik ve "Toplam" rakamı artık aynı, doğrulanmış birimde ifade ediliyor.
+- Gösterge panelinin KPI satırı, canlı verinin güvenilir şekilde cevaplayabildiği şeyler etrafında yeniden kuruldu: "Aktif Hat" ve "Yoğun Durak" kaldırıldı, "Yoğun Hat" ve "Ortalama Doluluk" artık son gerçek ölçümlerden hesaplanıyor, "Aktif Alarm" her zaman gerçek uyarı sayısını yansıtıyor.
+- Bir hattın insan tarafından okunan metinde referans verildiği her yer — AI öneri/uyarı metinleri, gösterge paneli uyarı kartları, canlı harita popup'ları — iç sayısal hat ID'sinden gerçek hat koduna (ör. "15A") çevrildi; bu, uyarıların arayüzde var olmayan bir hat numarasına referans vermesinden kaynaklanan tekrarlayan bir kafa karışıklığını çözdü.
+- CSRNet kalabalık sayım modeli, gerçek bir video kaynağını okuyup çıkarım yapan ve kişi sayılarını simülatörle aynı sözleşmeyi kullanarak MQTT üzerinden yayınlayan gerçek bir uç (edge) hattına (`edge/`) bağlandı — bu sayede gerçek kamerayla beslenen bir araç, aynı filoda simüle edilenlerle yan yana çalışabiliyor.
+- Uyarı üretim motoru kendi geriye bakış penceresi içinde idempotent hale getirildi; uzun süre yoğun kalan bir hat artık her döngüde neredeyse aynı yeni bir uyarı üretmiyor.
+
+- **Sprint Review Katılımcıları:** Bilal Solmaz, Kübra Güler, Saadettin Berber, Özlem Çal, Pınar Akdoğan
+
+</details>
 
   </details>
 
@@ -760,6 +848,49 @@ npm run dev
 
   <details>
     <summary><h2>Sprint Retrospective</h2></summary>
+
+**What went well**
+
+- Moving from mock data to a real, live-generating pipeline (historical backfill + `CanliYolculukUret`) gave the AI recommendation/alert engine genuine patterns to detect for the first time, instead of near-empty or synthetic-looking tables — this was the single biggest improvement to how trustworthy the demo feels.
+- Anchoring live data generation to the wall clock (:00/:15/:30/:45) instead of an arbitrary since-startup timer made the system's behavior predictable and easy to reason about when debugging totals and KPI values.
+- Wiring the CSRNet model into a real edge pipeline that speaks the same MQTT contract as the simulator meant the "one real device among simulated ones" scenario worked with zero changes to the backend ingest path — the hexagonal architecture's port/adapter boundary paid off again.
+
+**What needs improvement**
+
+- Several rounds of manual tuning were needed to get generated ridership numbers into a believable range (both per-vehicle person counts and the system-wide total per trigger) — an earlier, explicit target range (e.g. "400–950 total across all lines per round") would have saved iteration time.
+- A few restarts during active development left short gaps in the live-generated data, which briefly showed up as visual spikes on the trend chart — a clearer separation between "data generation code" and "manual test restarts" would reduce this kind of noise going forward.
+- The chatbot assistant's local model calls the right data tool and gives a correct, data-backed answer on many questions (e.g. correctly identifying the currently most-congested line with its real occupancy figure), but this is not yet fully consistent — on some questions it answers from general knowledge instead of calling a tool. This needs dedicated attention, either through model choice or stronger prompting/tool-forcing.
+
+**Planned next steps**
+
+- Finish evaluating whether the chatbot assistant should default to a stronger model (local or cloud) for tool-calling reliability, since small local models were shown to skip the data tools entirely on some questions.
+- Move the deployment from local Docker Compose only to a real production environment (single VPS to keep the local-LLM/Ollama service, or a hybrid setup), with domain, HTTPS, and secrets management finalized.
+- Add automated tests for the newly added live-generation logic (`CanliYolculukUret`, quarter-hour alignment, category rotation) and for the frontend trend/KPI components, extending test coverage beyond the backend-only suite from Sprint 2.
+- Revisit the CSRNet accuracy calibration now that it runs inside the live pipeline rather than as an offline script, using real operating conditions instead of only the manually labeled test set.
+
+<details>
+  <summary><h4>Türkçe Açıklama</h4></summary>
+
+**İyi giden yönler**
+
+- Mock veriden gerçek, canlı üretim yapan bir hatta (geçmiş backfill + `CanliYolculukUret`) geçmek, AI öneri/uyarı motoruna ilk kez neredeyse boş ya da yapay görünen tablolar yerine gerçek örüntüler kazandırdı — demo'nun ne kadar güvenilir hissettirdiği açısından tek başına en büyük iyileştirme buydu.
+- Canlı veri üretimini keyfi bir "açılıştan beri geçen süre" sayacı yerine duvar saatine (:00/:15/:30/:45) sabitlemek, sistemin davranışını öngörülebilir kıldı ve toplamları/KPI değerlerini hata ayıklarken akıl yürütmeyi kolaylaştırdı.
+- CSRNet modelini, simülatörle aynı MQTT sözleşmesini konuşan gerçek bir uç hattına bağlamak, "simüle edilenler arasında bir gerçek cihaz" senaryosunun backend veri alım yoluna sıfır değişiklikle çalışmasını sağladı — heksagonal mimarinin port/adaptör sınırı burada da karşılığını verdi.
+
+**Geliştirilmesi gereken yönler**
+
+- Üretilen yolculuk sayılarını inandırıcı bir aralığa (hem araç başına kişi sayısı hem de tetikleme başına sistem geneli toplam) oturtmak için birkaç tur manuel kalibrasyon gerekti — daha önceden net bir hedef aralık (ör. "tur başına tüm hatlarda toplam 400-950") belirlenmiş olsaydı yineleme süresinden tasarruf edilirdi.
+- Aktif geliştirme sırasında yapılan birkaç yeniden başlatma, canlı üretilen veride kısa boşluklar bıraktı; bu da trend grafiğinde kısa süreliğine görsel sıçramalar olarak ortaya çıktı — "veri üretim kodu" ile "manuel test yeniden başlatmaları" arasında daha net bir ayrım, ileride bu tür gürültüyü azaltacaktır.
+- Chatbot asistanının lokal modeli birçok soruda doğru veri aracını çağırıp gerçek veriye dayalı doğru bir yanıt veriyor (ör. o an en yoğun hattı gerçek doluluk oranıyla birlikte doğru tespit etmesi gibi), ama bu henüz tam tutarlı değil — bazı sorularda araç çağırmak yerine genel bilgiden yanıt üretiyor. Bu, model seçimi ya da daha güçlü prompt/araç zorlama yoluyla özel olarak ele alınmalı.
+
+**Planlanan sonraki adımlar**
+
+- Chatbot asistanının, araç çağırma güvenilirliği için varsayılan olarak daha güçlü bir modele (lokal ya da bulut) geçip geçmeyeceğinin değerlendirilmesi tamamlanacak; küçük lokal modellerin bazı sorularda veri araçlarını tamamen atladığı görüldü.
+- Deploy'un yalnızca lokal Docker Compose'dan gerçek bir üretim ortamına (lokal LLM/Ollama servisini korumak için tek bir VPS, ya da hibrit bir kurulum) taşınması; domain, HTTPS ve secrets yönetiminin sonlandırılması.
+- Yeni eklenen canlı üretim mantığı (`CanliYolculukUret`, çeyrek saat hizalaması, kategori rotasyonu) ve frontend trend/KPI bileşenleri için otomatik testler eklenerek, Sprint 2'deki yalnızca backend'i kapsayan test setinin ötesine geçilmesi.
+- CSRNet doğruluk kalibrasyonunun, artık çevrimdışı bir script değil canlı hattın bir parçası olarak çalıştığı göz önünde bulundurularak, yalnızca manuel etiketlenmiş test seti yerine gerçek çalışma koşullarıyla yeniden gözden geçirilmesi.
+
+</details>
 
   </details>
 
