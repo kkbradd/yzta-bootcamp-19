@@ -2,6 +2,16 @@
 
 ---
 
+## Team & Project Name / Ekip ve Proje Adı
+
+**Team Name:** YOTAY
+**Project Name:** YOTAY
+
+**Takım Adı:** YOTAY
+**Proje Adı:** YOTAY
+
+---
+
 ## Team Members
 
 | Name | Role | Social |
